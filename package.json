@@ -1,5 +1,5 @@
 {
-  "name": "fudge",
+  "name": "@pilotmoon/fudge",
   "version": "0.0.0",
   "description": "PopClip support module",
   "main": "dist/lib.js",

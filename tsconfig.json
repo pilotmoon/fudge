@@ -1,12 +1,11 @@
 {
   "compilerOptions": {
+    "outDir": "dist",
     "strict": true,
     "target": "ES2018",
-    "lib": ["ES2023"],
-    "skipLibCheck": true,
+    "lib": ["ES2018"],
     "module": "esnext",
     "moduleResolution": "node",
-    "outDir": "dist",
     "resolveJsonModule": true
   }
 }
