@@ -40,3 +40,17 @@ export function parseYamlObject(yamlSource: string) {
     throw new Error("Invalid YAML");
   }
 }
+
+export function parseJsonObject(jsonSource: string) {
+  try {
+    return ZConfigObject.parse(JSON.parse(jsonSource));
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      throw new Error("Invalid config");
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid JSON: ${e.message}`);
+    }
+    throw new Error("Invalid JSON");
+  }
+}
