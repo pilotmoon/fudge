@@ -4,7 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "bunx tsc --noEmit && bun build index.ts --outfile index.js --target node"
+    "check": "bunx tsc --noEmit",
+    "build": "bun run check && bun build index.ts --outfile index.js --target node --external case-anything --external zod --external js-yaml --external fast-plist",
+    "watch": "bun run build --watch"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
