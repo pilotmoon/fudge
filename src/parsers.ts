@@ -15,11 +15,11 @@ export function parsePlistObject(plist: string) {
   } catch (e) {
     if (e instanceof z.ZodError) {
       throw new Error("Invalid config");
-    } else if (e instanceof Error) {
-      throw new Error("Invalid plist: " + e.message);
-    } else {
-      throw new Error("Invalid plist");
     }
+    if (e instanceof Error) {
+      throw new Error(`Invalid plist: ${e.message}`);
+    }
+    throw new Error("Invalid plist");
   }
 }
 
@@ -33,10 +33,10 @@ export function parseYamlObject(yamlSource: string) {
   } catch (e) {
     if (e instanceof z.ZodError) {
       throw new Error("Invalid config");
-    } else if (e instanceof Error) {
-      throw new Error("Invalid YAML: " + e.message);
-    } else {
-      throw new Error("Invalid YAML");
     }
+    if (e instanceof Error) {
+      throw new Error(`Invalid YAML: ${e.message}`);
+    }
+    throw new Error("Invalid YAML");
   }
 }
