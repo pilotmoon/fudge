@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "bunx tsc --noEmit && bun build index.ts --outfile lib.js --target node"
+    "build": "bunx tsc --noEmit && bun build index.ts --outfile index.js --target node"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
