@@ -1,12 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.transform = exports.standardizeConfig = exports.standardizeKey = exports.configFromText = exports.loadStaticConfig = void 0;
-var loader_js_1 = require("./src/loader.js");
-Object.defineProperty(exports, "loadStaticConfig", { enumerable: true, get: function () { return loader_js_1.loadStaticConfig; } });
-var snippet_js_1 = require("./src/snippet.js");
-Object.defineProperty(exports, "configFromText", { enumerable: true, get: function () { return snippet_js_1.configFromText; } });
-var std_js_1 = require("./src/std.js");
-Object.defineProperty(exports, "standardizeKey", { enumerable: true, get: function () { return std_js_1.standardizeKey; } });
-Object.defineProperty(exports, "standardizeConfig", { enumerable: true, get: function () { return std_js_1.standardizeConfig; } });
-var config_js_1 = require("./src/config.js");
-Object.defineProperty(exports, "transform", { enumerable: true, get: function () { return config_js_1.transform; } });
+export { loadStaticConfig } from "./src/loader.js";
+export { configFromText } from "./src/snippet.js";
+export { standardizeKey, standardizeConfig } from "./src/std.js";
+export { transform } from "./src/config.js";

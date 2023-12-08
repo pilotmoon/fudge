@@ -1,5 +1,5 @@
 import { parse as parsePlist } from "fast-plist";
-import jsYaml from "js-yaml";
+import { load as parseYaml, JSON_SCHEMA } from "js-yaml";
 import { z } from "zod";
 
 const ZConfigObject = z.record(z.unknown());
@@ -26,8 +26,8 @@ export function parsePlistObject(plist: string) {
 export function parseYamlObject(yamlSource: string) {
   try {
     return ZConfigObject.parse(
-      jsYaml.load(yamlSource, {
-        schema: jsYaml.JSON_SCHEMA,
+      parseYaml(yamlSource, {
+        schema: JSON_SCHEMA,
       }),
     );
   } catch (e) {

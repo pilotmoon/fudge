@@ -1,18 +1,15 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.loadStaticConfig = void 0;
-const zod_1 = require("zod");
-const parsers_js_1 = require("./parsers.js");
-const snippet_js_1 = require("./snippet.js");
-const std_js_1 = require("./std.js");
-const ZConfigFiles = zod_1.z.array(zod_1.z.object({
-    name: zod_1.z.string(),
-    contents: zod_1.z.string(),
+import { z } from "zod";
+import { parsePlistObject, parseYamlObject } from "./parsers.js";
+import { loadSnippet } from "./snippet.js";
+import { standardizeConfig } from "./std.js";
+const ZConfigFiles = z.array(z.object({
+    name: z.string(),
+    contents: z.string(),
 }));
 const plistConfigFileName = "Config.plist";
 const yamlConfigFileNames = ["Config.json", "Config.yaml"];
 const configFileNames = [plistConfigFileName, ...yamlConfigFileNames];
-function loadStaticConfig(obj) {
+export function loadStaticConfig(obj) {
     const configFiles = ZConfigFiles.parse(obj);
     const result = {};
     // sort the config files in order; first, in the order of configFileNames, then in alphabetical order
@@ -31,13 +28,13 @@ function loadStaticConfig(obj) {
     for (const cfg of configFiles) {
         let thisConfig;
         if (cfg.name === plistConfigFileName) {
-            thisConfig = (0, std_js_1.standardizeConfig)((0, parsers_js_1.parsePlistObject)(cfg.contents));
+            thisConfig = standardizeConfig(parsePlistObject(cfg.contents));
         }
         else if (yamlConfigFileNames.includes(cfg.name)) {
-            thisConfig = (0, std_js_1.standardizeConfig)((0, parsers_js_1.parseYamlObject)(cfg.contents));
+            thisConfig = standardizeConfig(parseYamlObject(cfg.contents));
         }
         else {
-            thisConfig = (0, snippet_js_1.loadSnippet)(cfg.contents, cfg.name);
+            thisConfig = loadSnippet(cfg.contents, cfg.name);
         }
         if (thisConfig) {
             Object.assign(result, thisConfig);
@@ -48,4 +45,3 @@ function loadStaticConfig(obj) {
     }
     return result;
 }
-exports.loadStaticConfig = loadStaticConfig;

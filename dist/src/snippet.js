@@ -1,12 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.loadSnippet = exports.configFromText = exports.lines = void 0;
-const parsers_js_1 = require("./parsers.js");
-const std_js_1 = require("./std.js");
-function lines(string) {
+import { parseYamlObject } from "./parsers.js";
+import { standardizeConfig, standardizeKey as sk } from "./std.js";
+export function lines(string) {
     return string.split(/\r\n|\n|\r/);
 }
-exports.lines = lines;
 // return all lines with the given prefix, with the prefix removed.
 // the output stops at the first empty or unprefixed line.
 function extractPrefixedBlock(string, prefix) {
@@ -53,8 +49,8 @@ function embedTypeFromText(text, yaml, config) {
     let result = EmbedType.Unknown;
     let { module, language, interpreter } = config;
     module = typeof module === "boolean" ? config : false;
-    language = typeof language === "string" ? (0, std_js_1.standardizeKey)(language) : "";
-    interpreter = typeof interpreter === "string" ? (0, std_js_1.standardizeKey)(interpreter) : "";
+    language = typeof language === "string" ? sk(language) : "";
+    interpreter = typeof interpreter === "string" ? sk(interpreter) : "";
     const hasAdditionalContent = lines(text.trim()).length > lines(yaml.trim()).length;
     if (hasAdditionalContent) {
         if (language === "javascript") {
@@ -100,7 +96,7 @@ function hasTabsInBlock(yamlSource) {
     }
     return false;
 }
-function configFromText(text) {
+export function configFromText(text) {
     const yaml = candidateYaml(text);
     if (yaml === null) {
         return null;
@@ -108,12 +104,11 @@ function configFromText(text) {
     if (hasTabsInBlock(yaml)) {
         throw new Error("Don't use tabs in YAML");
     }
-    const config = (0, std_js_1.standardizeConfig)((0, parsers_js_1.parseYamlObject)(yaml));
+    const config = standardizeConfig(parseYamlObject(yaml));
     const embedType = embedTypeFromText(text, yaml, config);
     return { config, embedType };
 }
-exports.configFromText = configFromText;
-function loadSnippet(text, fileName) {
+export function loadSnippet(text, fileName) {
     var _a;
     try {
         const { config, embedType } = (_a = configFromText(text)) !== null && _a !== void 0 ? _a : {
@@ -141,4 +136,3 @@ function loadSnippet(text, fileName) {
         throw new Error(`Could not understand ${fileName}. (${msg})`);
     }
 }
-exports.loadSnippet = loadSnippet;
