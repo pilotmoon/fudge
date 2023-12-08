@@ -1,5 +1,5 @@
 import { parse as parsePlist } from "fast-plist";
-import { load as parseYaml, JSON_SCHEMA } from "js-yaml";
+import { JSON_SCHEMA, load as parseYaml } from "js-yaml";
 import { z } from "zod";
 
 const ZConfigObject = z.record(z.unknown());
@@ -23,6 +23,20 @@ export function parsePlistObject(plist: string) {
   }
 }
 
+export function parseJsonObject(jsonSource: string) {
+  try {
+    return ZConfigObject.parse(JSON.parse(jsonSource));
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      throw new Error("Invalid config");
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid JSON: ${e.message}`);
+    }
+    throw new Error("Invalid JSON");
+  }
+}
+
 export function parseYamlObject(yamlSource: string) {
   try {
     return ZConfigObject.parse(
@@ -38,19 +52,5 @@ export function parseYamlObject(yamlSource: string) {
       throw new Error(`Invalid YAML: ${e.message}`);
     }
     throw new Error("Invalid YAML");
-  }
-}
-
-export function parseJsonObject(jsonSource: string) {
-  try {
-    return ZConfigObject.parse(JSON.parse(jsonSource));
-  } catch (e) {
-    if (e instanceof z.ZodError) {
-      throw new Error("Invalid config");
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid JSON: ${e.message}`);
-    }
-    throw new Error("Invalid JSON");
   }
 }

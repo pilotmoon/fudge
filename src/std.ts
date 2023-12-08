@@ -1,14 +1,15 @@
 import { lowerCase } from "case-anything";
 import { Config, transform } from "./config.js";
 import { mapping } from "./mapping.json";
-export function standardizeKey(str: string) {
-  let result = str;
-  if (!result.startsWith("_")) {
-    result = lowerCase(result, { keepSpecialCharacters: false });
-    result = result.replace(/^(extension|option) /, "");
-    result = mapping[result as keyof typeof mapping] || result;
+
+export function standardizeKey(key: string) {
+  let k = key;
+  if (!k.startsWith("_")) {
+    k = lowerCase(k, { keepSpecialCharacters: false });
+    k = k.replace(/^(extension|option) /, "");
+    k = mapping[k as keyof typeof mapping] || k;
   }
-  return result;
+  return k;
 }
 
 export function standardizeConfig(config: unknown) {

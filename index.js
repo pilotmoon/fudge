@@ -3,7 +3,7 @@ import {z as z2} from "zod";
 
 // src/parsers.ts
 import {parse as parsePlist} from "fast-plist";
-import {load as parseYaml, JSON_SCHEMA} from "js-yaml";
+import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
 import {z} from "zod";
 function parsePlistObject(plist) {
   try {
@@ -16,6 +16,19 @@ function parsePlistObject(plist) {
       throw new Error(`Invalid plist: ${e.message}`);
     }
     throw new Error("Invalid plist");
+  }
+}
+function parseJsonObject(jsonSource) {
+  try {
+    return ZConfigObject.parse(JSON.parse(jsonSource));
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      throw new Error("Invalid config");
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid JSON: ${e.message}`);
+    }
+    throw new Error("Invalid JSON");
   }
 }
 function parseYamlObject(yamlSource) {
@@ -80,14 +93,14 @@ var mapping = {
 };
 
 // src/std.ts
-function standardizeKey(str) {
-  let result = str;
-  if (!result.startsWith("_")) {
-    result = lowerCase(result, { keepSpecialCharacters: false });
-    result = result.replace(/^(extension|option) /, "");
-    result = mapping[result] || result;
+function standardizeKey(key) {
+  let k = key;
+  if (!k.startsWith("_")) {
+    k = lowerCase(k, { keepSpecialCharacters: false });
+    k = k.replace(/^(extension|option) /, "");
+    k = mapping[k] || k;
   }
-  return result;
+  return k;
 }
 function standardizeConfig(config2) {
   if (typeof config2 !== "object" || config2 === null || Array.isArray(config2)) {
@@ -234,7 +247,9 @@ function loadStaticConfig(obj) {
     let thisConfig;
     if (cfg.name === plistConfigFileName) {
       thisConfig = standardizeConfig(parsePlistObject(cfg.contents));
-    } else if (yamlConfigFileNames.includes(cfg.name)) {
+    } else if (cfg.name === jsonConfigFileName) {
+      thisConfig = standardizeConfig(parseJsonObject(cfg.contents));
+    } else if (cfg.name === yamlConfigFileName) {
       thisConfig = standardizeConfig(parseYamlObject(cfg.contents));
     } else {
       thisConfig = loadSnippet(cfg.contents, cfg.name);
@@ -252,8 +267,13 @@ var ZConfigFiles = z2.array(z2.object({
   contents: z2.string()
 }));
 var plistConfigFileName = "Config.plist";
-var yamlConfigFileNames = ["Config.json", "Config.yaml"];
-var configFileNames = [plistConfigFileName, ...yamlConfigFileNames];
+var jsonConfigFileName = "Config.json";
+var yamlConfigFileName = "Config.yaml";
+var configFileNames = [
+  plistConfigFileName,
+  jsonConfigFileName,
+  yamlConfigFileName
+];
 export {
   standardizeKey,
   standardizeConfig,

@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { Config } from "./config.js";
-import { parsePlistObject, parseYamlObject } from "./parsers.js";
+import {
+  parseJsonObject,
+  parsePlistObject,
+  parseYamlObject,
+} from "./parsers.js";
 import { loadSnippet } from "./snippet.js";
 import { standardizeConfig } from "./std.js";
 
@@ -13,8 +17,13 @@ const ZConfigFiles = z.array(
 export type ConfigFiles = z.infer<typeof ZConfigFiles>;
 
 const plistConfigFileName = "Config.plist";
-const yamlConfigFileNames = ["Config.json", "Config.yaml"];
-const configFileNames = [plistConfigFileName, ...yamlConfigFileNames];
+const jsonConfigFileName = "Config.json";
+const yamlConfigFileName = "Config.yaml";
+const configFileNames = [
+  plistConfigFileName,
+  jsonConfigFileName,
+  yamlConfigFileName,
+];
 
 export function loadStaticConfig(obj: ConfigFiles): Config {
   const configFiles = ZConfigFiles.parse(obj);
@@ -35,7 +44,9 @@ export function loadStaticConfig(obj: ConfigFiles): Config {
     let thisConfig;
     if (cfg.name === plistConfigFileName) {
       thisConfig = standardizeConfig(parsePlistObject(cfg.contents));
-    } else if (yamlConfigFileNames.includes(cfg.name)) {
+    } else if (cfg.name === jsonConfigFileName) {
+      thisConfig = standardizeConfig(parseJsonObject(cfg.contents));
+    } else if (cfg.name === yamlConfigFileName) {
       thisConfig = standardizeConfig(parseYamlObject(cfg.contents));
     } else {
       thisConfig = loadSnippet(cfg.contents, cfg.name);
