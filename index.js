@@ -275,6 +275,7 @@ var configFileNames = [
   yamlConfigFileName
 ];
 export {
+  transform,
   standardizeKey,
   standardizeConfig,
   loadStaticConfig,
