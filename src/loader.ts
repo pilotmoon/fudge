@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { Config } from "./config.js";
+import { object, array, string, parse, type Output } from "valibot";
+import { type Config } from "./config.js";
 import {
   parseJsonObject,
   parsePlistObject,
@@ -8,13 +8,12 @@ import {
 import { loadSnippet } from "./snippet.js";
 import { standardizeConfig } from "./std.js";
 
-const ZConfigFiles = z.array(
-  z.object({
-    name: z.string(),
-    contents: z.string(),
+const VConfigFiles = array(
+  object({
+    name: string(),
+    contents: string(),
   }),
 );
-export type ConfigFiles = z.infer<typeof ZConfigFiles>;
 
 const plistConfigFileName = "Config.plist";
 const jsonConfigFileName = "Config.json";
@@ -25,8 +24,8 @@ const configFileNames = [
   yamlConfigFileName,
 ];
 
-export function loadStaticConfig(obj: ConfigFiles): Config {
-  const configFiles = ZConfigFiles.parse(obj);
+export function loadStaticConfig(obj: Output<typeof VConfigFiles>): Config {
+  const configFiles = parse(VConfigFiles, obj);
   const result = {};
 
   // sort the config files in order; first, in the order of configFileNames, then in alphabetical order

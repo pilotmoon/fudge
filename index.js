@@ -1,16 +1,16 @@
 // src/loader.ts
-import {z as z2} from "zod";
+import {object, array, string, parse as parse2} from "valibot";
 
 // src/parsers.ts
 import {parse as parsePlist} from "fast-plist";
 import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
-import {z} from "zod";
+import {record, parse, unknown, ValiError} from "valibot";
 function parsePlistObject(plist) {
   try {
-    return ZConfigObject.parse(parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
+    return parse(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      throw new Error("Invalid config");
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {
       throw new Error(`Invalid plist: ${e.message}`);
@@ -20,10 +20,10 @@ function parsePlistObject(plist) {
 }
 function parseJsonObject(jsonSource) {
   try {
-    return ZConfigObject.parse(JSON.parse(jsonSource));
+    return parse(VConfigObject, JSON.parse(jsonSource));
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      throw new Error("Invalid config");
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {
       throw new Error(`Invalid JSON: ${e.message}`);
@@ -33,12 +33,10 @@ function parseJsonObject(jsonSource) {
 }
 function parseYamlObject(yamlSource) {
   try {
-    return ZConfigObject.parse(parseYaml(yamlSource, {
-      schema: JSON_SCHEMA
-    }));
+    return parse(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      throw new Error("Invalid config");
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {
       throw new Error(`Invalid YAML: ${e.message}`);
@@ -46,21 +44,21 @@ function parseYamlObject(yamlSource) {
     throw new Error("Invalid YAML");
   }
 }
-var ZConfigObject = z.record(z.unknown());
+var VConfigObject = record(unknown());
 
 // src/std.ts
 import {lowerCase} from "case-anything";
 
 // src/config.ts
-function transform(val, fn) {
+function transformConfig(val, fn) {
   if (typeof val !== "object" || val === null)
     return val;
   const result = {};
   for (const [key, obj] of Object.entries(val)) {
     if (Array.isArray(obj)) {
-      result[fn(key)] = obj.map((item) => transform(item, fn));
+      result[fn(key)] = obj.map((item) => transformConfig(item, fn));
     } else {
-      result[fn(key)] = transform(obj, fn);
+      result[fn(key)] = transformConfig(obj, fn);
     }
   }
   return result;
@@ -106,7 +104,7 @@ function standardizeConfig(config2) {
   if (typeof config2 !== "object" || config2 === null || Array.isArray(config2)) {
     throw new Error("Cannot standardize that");
   }
-  return transform(config2, standardizeKey);
+  return transformConfig(config2, standardizeKey);
 }
 
 // src/snippet.ts
@@ -230,7 +228,7 @@ var EmbedType;
 
 // src/loader.ts
 function loadStaticConfig(obj) {
-  const configFiles = ZConfigFiles.parse(obj);
+  const configFiles = parse2(VConfigFiles, obj);
   const result = {};
   configFiles.sort((a, b) => {
     const aIndex = configFileNames.indexOf(a.name);
@@ -262,9 +260,9 @@ function loadStaticConfig(obj) {
   }
   return result;
 }
-var ZConfigFiles = z2.array(z2.object({
-  name: z2.string(),
-  contents: z2.string()
+var VConfigFiles = array(object({
+  name: string(),
+  contents: string()
 }));
 var plistConfigFileName = "Config.plist";
 var jsonConfigFileName = "Config.json";
@@ -275,7 +273,6 @@ var configFileNames = [
   yamlConfigFileName
 ];
 export {
-  transform,
   standardizeKey,
   standardizeConfig,
   loadStaticConfig,

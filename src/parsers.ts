@@ -1,20 +1,21 @@
 import { parse as parsePlist } from "fast-plist";
 import { JSON_SCHEMA, load as parseYaml } from "js-yaml";
-import { z } from "zod";
+import { record, parse, unknown, ValiError } from "valibot";
 
-const ZConfigObject = z.record(z.unknown());
+const VConfigObject = record(unknown());
 
 export function parsePlistObject(plist: string) {
   try {
-    return ZConfigObject.parse(
+    return parse(
+      VConfigObject,
       parsePlist(
         // remove any Credits array, as there are invalid ones out there
         plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, ""),
       ),
     );
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      throw new Error("Invalid config");
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {
       throw new Error(`Invalid plist: ${e.message}`);
@@ -25,10 +26,10 @@ export function parsePlistObject(plist: string) {
 
 export function parseJsonObject(jsonSource: string) {
   try {
-    return ZConfigObject.parse(JSON.parse(jsonSource));
+    return parse(VConfigObject, JSON.parse(jsonSource));
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      throw new Error("Invalid config");
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {
       throw new Error(`Invalid JSON: ${e.message}`);
@@ -39,14 +40,10 @@ export function parseJsonObject(jsonSource: string) {
 
 export function parseYamlObject(yamlSource: string) {
   try {
-    return ZConfigObject.parse(
-      parseYaml(yamlSource, {
-        schema: JSON_SCHEMA,
-      }),
-    );
+    return parse(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
   } catch (e) {
-    if (e instanceof z.ZodError) {
-      throw new Error("Invalid config");
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {
       throw new Error(`Invalid YAML: ${e.message}`);
