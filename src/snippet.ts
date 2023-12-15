@@ -56,12 +56,18 @@ function embedTypeFromText(text: string, yaml: string, config: Config) {
   let result: EmbedType = EmbedType.Unknown;
 
   let { module, language, interpreter } = config;
-  module = typeof module === "boolean" ? config : false;
+  if (typeof module === "string") {
+    throw new Error("In a header, 'module' must be a boolean");
+  }
+  module = typeof module === "boolean" ? module : false;
   language = typeof language === "string" ? sk(language) : "";
   interpreter = typeof interpreter === "string" ? sk(interpreter) : "";
+  if (module && !language) {
+    throw new Error("A 'language' is needed with 'module'");
+  }
+
   const hasAdditionalContent =
     lines(text.trim()).length > lines(yaml.trim()).length;
-
   if (hasAdditionalContent) {
     if (language === "javascript") {
       if (module) {
@@ -134,7 +140,10 @@ export function loadSnippet(text: string, fileName: string) {
     }
     return config;
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "unknown error";
-    throw new Error(`Could not understand ${fileName}. (${msg})`);
+    const msg =
+      error instanceof Error && error.message
+        ? error.message
+        : "Invalid snippet";
+    throw new Error(msg);
   }
 }

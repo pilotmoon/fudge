@@ -136,9 +136,15 @@ var candidateYaml = function(string) {
 var embedTypeFromText = function(text, yaml, config2) {
   let result = EmbedType.Unknown;
   let { module, language, interpreter } = config2;
-  module = typeof module === "boolean" ? config2 : false;
+  if (typeof module === "string") {
+    throw new Error("In a header, 'module' must be a boolean");
+  }
+  module = typeof module === "boolean" ? module : false;
   language = typeof language === "string" ? standardizeKey(language) : "";
   interpreter = typeof interpreter === "string" ? standardizeKey(interpreter) : "";
+  if (module && !language) {
+    throw new Error("A 'language' is needed with 'module'");
+  }
   const hasAdditionalContent = lines(text.trim()).length > lines(yaml.trim()).length;
   if (hasAdditionalContent) {
     if (language === "javascript") {
@@ -209,8 +215,8 @@ function loadSnippet(text, fileName) {
     }
     return config2;
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "unknown error";
-    throw new Error(`Could not understand ${fileName}. (${msg})`);
+    const msg = error instanceof Error && error.message ? error.message : "Invalid snippet";
+    throw new Error(msg);
   }
 }
 var EmbedType;
