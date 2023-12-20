@@ -1,50 +1,21 @@
-// src/loader.ts
-import {object, array, string, parse as parse2} from "valibot";
-
-// src/parsers.ts
-import {parse as parsePlist} from "fast-plist";
-import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
-import {record, parse, unknown, ValiError} from "valibot";
-function parsePlistObject(plist) {
-  try {
-    return parse(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
-  } catch (e) {
-    if (e instanceof ValiError) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid plist: ${e.message}`);
-    }
-    throw new Error("Invalid plist");
-  }
-}
-function parseJsonObject(jsonSource) {
-  try {
-    return parse(VConfigObject, JSON.parse(jsonSource));
-  } catch (e) {
-    if (e instanceof ValiError) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid JSON: ${e.message}`);
-    }
-    throw new Error("Invalid JSON");
-  }
-}
-function parseYamlObject(yamlSource) {
-  try {
-    return parse(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
-  } catch (e) {
-    if (e instanceof ValiError) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid YAML: ${e.message}`);
-    }
-    throw new Error("Invalid YAML");
-  }
-}
-var VConfigObject = record(unknown());
+// src/validate.ts
+import {
+ValiError,
+array,
+intersect,
+maxLength,
+minLength,
+nonOptional,
+object,
+optional,
+parse,
+record,
+regex,
+safeParse,
+string,
+transform,
+union
+} from "valibot";
 
 // src/std.ts
 import {lowerCase} from "case-anything";
@@ -107,13 +78,123 @@ function standardizeConfig(config2) {
   return transformConfig(config2, standardizeKey);
 }
 
-// src/snippet.ts
-function lines(string) {
-  return string.split(/\r\n|\n|\r/);
+// src/validate.ts
+function setPreferredLocalizations(pl) {
+  const { success, output } = safeParse(array(string()), pl);
+  preferredLocalizations = success ? output.map(standardizeKey) : ["en"];
 }
-var extractPrefixedBlock = function(string, prefix) {
+function validateStaticConfig(config2) {
+  try {
+    const base = parse(ExtensionSchema, config2);
+    return base;
+  } catch (error) {
+    if (error instanceof ValiError) {
+      throw new Error(formatValiError(error));
+    } else {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Invalid base config: ${msg}`);
+    }
+  }
+}
+var formatValiError = function(error) {
+  const messages = [];
+  for (const issue of error.issues) {
+    const fmt = formatValiIssue(issue);
+    if (fmt) {
+      messages.push(`${fmt.dotPath}: ${fmt.message}`);
+    }
+  }
+  return messages.join("\n");
+};
+var formatValiIssue = function(issue) {
+  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
+  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
+    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0 > 0) ?? issue.issues[0]);
+    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
+    return fmt;
+  }
+  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
+  return { dotPath, message };
+};
+var preferredLocalizations = [];
+var SaneStringSchema = string([minLength(1), maxLength(80)]);
+var StringTableSchema = intersect([
+  record(SaneStringSchema, SaneStringSchema),
+  object({
+    en: nonOptional(SaneStringSchema, "An 'en' string is required")
+  })
+]);
+var LocalizableStringSchema = transform(union([SaneStringSchema, StringTableSchema]), (value) => typeof value === "string" ? { en: value } : value);
+var ProcessedLocalizableStringSchema = transform(LocalizableStringSchema, (value) => {
+  const canonical = value["en"];
+  const preferred = preferredLocalizations.map((key) => value[key]).find((v) => v) ?? canonical;
+  return { table: value, preferred, canonical };
+});
+var IdentifierSchema = string([
+  minLength(1),
+  maxLength(100),
+  regex(/^[0-9a-zA-Z-_.]*$/, "Use only A-Z, a-z, 0-9, hyphen (-), underscore (_), and period (.)")
+]);
+var ExtensionSchema = object({
+  name: nonOptional(ProcessedLocalizableStringSchema, "A name is required"),
+  identifier: optional(IdentifierSchema)
+});
+
+// src/loader.ts
+import {object as object2, array as array2, string as string2, parse as parse3} from "valibot";
+
+// src/parsers.ts
+import {parse as parsePlist} from "fast-plist";
+import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
+import {record as record2, parse as parse2, unknown, ValiError as ValiError2} from "valibot";
+function parsePlistObject(plist) {
+  try {
+    return parse2(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
+  } catch (e) {
+    if (e instanceof ValiError2) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid plist: ${e.message}`);
+    }
+    throw new Error("Invalid plist");
+  }
+}
+function parseJsonObject(jsonSource) {
+  try {
+    return parse2(VConfigObject, JSON.parse(jsonSource));
+  } catch (e) {
+    if (e instanceof ValiError2) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid JSON: ${e.message}`);
+    }
+    throw new Error("Invalid JSON");
+  }
+}
+function parseYamlObject(yamlSource) {
+  try {
+    return parse2(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
+  } catch (e) {
+    if (e instanceof ValiError2) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid YAML: ${e.message}`);
+    }
+    throw new Error("Invalid YAML");
+  }
+}
+var VConfigObject = record2(unknown());
+
+// src/snippet.ts
+function lines(string2) {
+  return string2.split(/\r\n|\n|\r/);
+}
+var extractPrefixedBlock = function(string2, prefix) {
   const result = [];
-  for (const line of lines(string)) {
+  for (const line of lines(string2)) {
     if (line !== "" && (prefix === "" || line.startsWith(prefix))) {
       result.push(line.replace(prefix, ""));
     } else {
@@ -122,13 +203,13 @@ var extractPrefixedBlock = function(string, prefix) {
   }
   return result.join("\n");
 };
-var candidateYaml = function(string) {
-  const components = string.match(/([^\n]*)# ?popclip.+$/is);
+var candidateYaml = function(string2) {
+  const components = string2.match(/([^\n]*)# ?popclip.+$/is);
   if (components?.length !== 2) {
     return null;
   }
   const candidateYaml2 = extractPrefixedBlock(components[0], components[1]);
-  if (!/name\"\s*:|name: /is.test(candidateYaml2)) {
+  if (!/name\"\s*:|name:\s+/is.test(candidateYaml2)) {
     return null;
   }
   return candidateYaml2.replace(/\u00A0/g, " ").trim();
@@ -234,7 +315,7 @@ var EmbedType;
 
 // src/loader.ts
 function loadStaticConfig(obj) {
-  const configFiles = parse2(VConfigFiles, obj);
+  const configFiles = parse3(VConfigFiles, obj);
   const result = {};
   configFiles.sort((a, b) => {
     const aIndex = configFileNames.indexOf(a.name);
@@ -266,9 +347,9 @@ function loadStaticConfig(obj) {
   }
   return result;
 }
-var VConfigFiles = array(object({
-  name: string(),
-  contents: string()
+var VConfigFiles = array2(object2({
+  name: string2(),
+  contents: string2()
 }));
 var plistConfigFileName = "Config.plist";
 var jsonConfigFileName = "Config.json";
@@ -278,9 +359,18 @@ var configFileNames = [
   jsonConfigFileName,
   yamlConfigFileName
 ];
+
+// index.ts
+function init({
+  preferredLocalizations: preferredLocalizations2
+}) {
+  setPreferredLocalizations(preferredLocalizations2);
+}
 export {
+  validateStaticConfig,
   standardizeKey,
   standardizeConfig,
   loadStaticConfig,
+  init,
   configFromText
 };
