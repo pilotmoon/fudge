@@ -31,8 +31,8 @@ function candidateYaml(string: string) {
   // then extract the candidate lines
   const candidateYaml = extractPrefixedBlock(components[0], components[1]);
 
-  // a snippet always contains something like `name: ` or `name":`
-  if (!/name\"\s*:|name: /is.test(candidateYaml)) {
+  // a snippet always contains something like `name:` or `name":`
+  if (!/name\"\s*:|name:\s+/is.test(candidateYaml)) {
     return null;
   }
 
