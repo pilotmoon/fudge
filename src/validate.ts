@@ -18,8 +18,8 @@ import {
   transform,
   union,
 } from "valibot";
-import { standardizeKey } from "./std";
 import { log, logw } from "./log";
+import { standardizeKey } from "./std";
 
 // The preferred localizations for the current process.
 let preferredLocalizations: string[] = [];
@@ -53,7 +53,7 @@ const LocalizableStringSchema = transform(
 const ProcessedLocalizableStringSchema = transform(
   LocalizableStringSchema,
   (value) => {
-    const canonical = value["en"];
+    const canonical = value.en;
     const preferred =
       preferredLocalizations.map((key) => value[key]).find((v) => v) ??
       canonical;
@@ -82,10 +82,9 @@ export function validateStaticConfig(config: unknown) {
   } catch (error) {
     if (error instanceof ValiError) {
       throw new Error(formatValiError(error));
-    } else {
-      const msg = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`Invalid base config: ${msg}`);
     }
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Invalid base config: ${msg}`);
   }
 }
 
@@ -104,8 +103,7 @@ function formatValiIssue(issue: Issue): { dotPath: string; message: string } {
   const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
   if (Array.isArray(issue.issues) && issue.issues.length > 0) {
     const fmt = formatValiIssue(
-      issue.issues?.find((item) => item?.path?.length ?? 0 > 0) ??
-        issue.issues[0],
+      issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0],
     );
     fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
     return fmt;

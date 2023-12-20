@@ -90,10 +90,9 @@ function validateStaticConfig(config2) {
   } catch (error) {
     if (error instanceof ValiError) {
       throw new Error(formatValiError(error));
-    } else {
-      const msg = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`Invalid base config: ${msg}`);
     }
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Invalid base config: ${msg}`);
   }
 }
 var formatValiError = function(error) {
@@ -109,7 +108,7 @@ var formatValiError = function(error) {
 var formatValiIssue = function(issue) {
   const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
   if (Array.isArray(issue.issues) && issue.issues.length > 0) {
-    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0 > 0) ?? issue.issues[0]);
+    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
     fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
     return fmt;
   }
@@ -126,7 +125,7 @@ var StringTableSchema = intersect([
 ]);
 var LocalizableStringSchema = transform(union([SaneStringSchema, StringTableSchema]), (value) => typeof value === "string" ? { en: value } : value);
 var ProcessedLocalizableStringSchema = transform(LocalizableStringSchema, (value) => {
-  const canonical = value["en"];
+  const canonical = value.en;
   const preferred = preferredLocalizations.map((key) => value[key]).find((v) => v) ?? canonical;
   return { table: value, preferred, canonical };
 });
@@ -141,12 +140,12 @@ var ExtensionSchema = object({
 });
 
 // src/loader.ts
-import {object as object2, array as array2, string as string2, parse as parse3} from "valibot";
+import {array as array2, object as object2, parse as parse3, string as string2} from "valibot";
 
 // src/parsers.ts
 import {parse as parsePlist} from "fast-plist";
 import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
-import {record as record2, parse as parse2, unknown, ValiError as ValiError2} from "valibot";
+import {ValiError as ValiError2, parse as parse2, record as record2, unknown} from "valibot";
 function parsePlistObject(plist) {
   try {
     return parse2(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));

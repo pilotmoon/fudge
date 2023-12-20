@@ -1,6 +1,6 @@
 import { parse as parsePlist } from "fast-plist";
 import { JSON_SCHEMA, load as parseYaml } from "js-yaml";
-import { record, parse, unknown, ValiError } from "valibot";
+import { ValiError, parse, record, unknown } from "valibot";
 
 const VConfigObject = record(unknown());
 

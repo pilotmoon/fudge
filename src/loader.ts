@@ -1,4 +1,4 @@
-import { object, array, string, parse, type Output } from "valibot";
+import { type Output, array, object, parse, string } from "valibot";
 import { type Config } from "./config.js";
 import {
   parseJsonObject,
