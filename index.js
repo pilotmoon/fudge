@@ -2,6 +2,7 @@
 import {
 ValiError,
 array,
+safeInteger,
 intersect,
 maxLength,
 minLength,
@@ -14,7 +15,10 @@ regex,
 safeParse,
 string,
 transform,
-union
+union,
+number,
+minValue,
+enum_
 } from "valibot";
 
 // src/std.ts
@@ -83,9 +87,15 @@ function setPreferredLocalizations(pl) {
   const { success, output } = safeParse(array(string()), pl);
   preferredLocalizations = success ? output.map(standardizeKey) : ["en"];
 }
+function setIdMaker(maker) {
+  idMaker = maker;
+}
 function validateStaticConfig(config2) {
   try {
-    const base = parse(ExtensionSchema, config2);
+    const base = parse(ExtensionCoreSchema, config2);
+    if (!base.identifier) {
+      base.identifier = parse(IdentifierSchema, idMaker(base.name.canonical));
+    }
     return base;
   } catch (error) {
     if (error instanceof ValiError) {
@@ -116,6 +126,9 @@ var formatValiIssue = function(issue) {
   return { dotPath, message };
 };
 var preferredLocalizations = [];
+var idMaker = (_) => {
+  throw new Error("idMaker not set");
+};
 var SaneStringSchema = string([minLength(1), maxLength(80)]);
 var StringTableSchema = intersect([
   record(SaneStringSchema, SaneStringSchema),
@@ -134,9 +147,27 @@ var IdentifierSchema = string([
   maxLength(100),
   regex(/^[0-9a-zA-Z-_.]*$/, "Use only A-Z, a-z, 0-9, hyphen (-), underscore (_), and period (.)")
 ]);
-var ExtensionSchema = object({
+var VersionNumberSchema = number("Must be a number", [
+  safeInteger("Must be an integer"),
+  minValue(1)
+]);
+var VersionStringSchema = string("Must be a string", [
+  regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`)
+]);
+var ModuleSchema = SaneStringSchema;
+var Entitlement;
+(function(Entitlement2) {
+  Entitlement2["Dynamic"] = "dynamic";
+  Entitlement2["Network"] = "network";
+})(Entitlement || (Entitlement = {}));
+var EntitlementsSchema = array(enum_(Entitlement, "Invalid entitlement"));
+var ExtensionCoreSchema = object({
   name: nonOptional(ProcessedLocalizableStringSchema, "A name is required"),
-  identifier: optional(IdentifierSchema)
+  identifier: optional(IdentifierSchema),
+  "popclip version": optional(VersionNumberSchema),
+  "macos version": optional(VersionStringSchema),
+  module: optional(ModuleSchema),
+  entitlements: optional(EntitlementsSchema)
 });
 
 // src/loader.ts
@@ -217,11 +248,11 @@ var embedTypeFromText = function(text, yaml, config2) {
   let result = EmbedType.Unknown;
   let { module, language, interpreter } = config2;
   if (typeof module === "string") {
-    throw new Error("In a header, 'module' must be a boolean");
+    throw new Error("In a snippet, 'module' must be a boolean");
   }
   module = typeof module === "boolean" ? module : false;
   language = typeof language === "string" ? standardizeKey(language) : "";
-  interpreter = typeof interpreter === "string" ? standardizeKey(interpreter) : "";
+  interpreter = typeof interpreter === "string" ? interpreter : "";
   if (module && !language) {
     throw new Error("A 'language' is needed with 'module'");
   }
@@ -361,8 +392,10 @@ var configFileNames = [
 
 // index.ts
 function init({
+  idMaker: idMaker2,
   preferredLocalizations: preferredLocalizations2
 }) {
+  setIdMaker(idMaker2);
   setPreferredLocalizations(preferredLocalizations2);
 }
 export {

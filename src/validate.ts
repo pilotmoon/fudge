@@ -1,9 +1,11 @@
+import { kebabCase } from "case-anything";
 import {
   Issue,
   Output,
   ValiError,
   array,
   flatten,
+  safeInteger,
   intersect,
   maxLength,
   minLength,
@@ -17,6 +19,10 @@ import {
   string,
   transform,
   union,
+  number,
+  minValue,
+  enum_,
+  literal,
 } from "valibot";
 import { log, logw } from "./log";
 import { standardizeKey } from "./std";
@@ -31,6 +37,14 @@ let preferredLocalizations: string[] = [];
 export function setPreferredLocalizations(pl?: string[]) {
   const { success, output } = safeParse(array(string()), pl);
   preferredLocalizations = success ? output.map(standardizeKey) : ["en"];
+}
+
+// generator function for when identifier is missing
+let idMaker: (name: string) => string = (_: string) => {
+  throw new Error("idMaker not set");
+};
+export function setIdMaker(maker: (name: string) => string) {
+  idMaker = maker;
 }
 
 /***********************************************************
@@ -70,14 +84,40 @@ const IdentifierSchema = string([
   ),
 ]);
 
-const ExtensionSchema = object({
+const VersionNumberSchema = number("Must be a number", [
+  safeInteger("Must be an integer"),
+  minValue(1),
+]);
+
+const VersionStringSchema = string("Must be a string", [
+  regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`),
+]);
+
+// const ModuleSchema = union([SaneStringSchema, literal(true)]);
+const ModuleSchema = SaneStringSchema;
+
+enum Entitlement {
+  Dynamic = "dynamic",
+  Network = "network",
+}
+
+const EntitlementsSchema = array(enum_(Entitlement, "Invalid entitlement"));
+
+const ExtensionCoreSchema = object({
   name: nonOptional(ProcessedLocalizableStringSchema, "A name is required"),
   identifier: optional(IdentifierSchema),
+  "popclip version": optional(VersionNumberSchema),
+  "macos version": optional(VersionStringSchema),
+  module: optional(ModuleSchema),
+  entitlements: optional(EntitlementsSchema),
 });
 
 export function validateStaticConfig(config: unknown) {
   try {
-    const base = parse(ExtensionSchema, config);
+    const base = parse(ExtensionCoreSchema, config);
+    if (!base.identifier) {
+      base.identifier = parse(IdentifierSchema, idMaker(base.name.canonical));
+    }
     return base;
   } catch (error) {
     if (error instanceof ValiError) {

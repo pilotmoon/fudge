@@ -57,11 +57,11 @@ function embedTypeFromText(text: string, yaml: string, config: Config) {
 
   let { module, language, interpreter } = config;
   if (typeof module === "string") {
-    throw new Error("In a header, 'module' must be a boolean");
+    throw new Error("In a snippet, 'module' must be a boolean");
   }
   module = typeof module === "boolean" ? module : false;
   language = typeof language === "string" ? sk(language) : "";
-  interpreter = typeof interpreter === "string" ? sk(interpreter) : "";
+  interpreter = typeof interpreter === "string" ? interpreter : "";
   if (module && !language) {
     throw new Error("A 'language' is needed with 'module'");
   }
