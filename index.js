@@ -62,7 +62,8 @@ var mapping = {
   lang: "language",
   js: "javascript",
   ts: "typescript",
-  params: "parameters"
+  params: "parameters",
+  id: "identifier"
 };
 
 // src/std.ts
