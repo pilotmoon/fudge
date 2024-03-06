@@ -12,7 +12,6 @@ optional,
 parse,
 record,
 regex,
-safeParse,
 string,
 transform,
 union,
@@ -21,6 +20,130 @@ minValue,
 enum_,
 literal
 } from "valibot";
+function setIdMaker(maker) {
+  idMaker = maker;
+}
+function validateStaticConfig(config) {
+  try {
+    const base = parse(ExtensionCoreSchema, config);
+    if (!base.identifier) {
+      base.identifier = parse(IdentifierSchema, idMaker(base.name.canonical));
+    }
+    return base;
+  } catch (error) {
+    if (error instanceof ValiError) {
+      throw new Error(formatValiError(error));
+    }
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Invalid base config: ${msg}`);
+  }
+}
+var formatValiError = function(error) {
+  const messages = [];
+  for (const issue of error.issues) {
+    const fmt = formatValiIssue(issue);
+    if (fmt) {
+      messages.push(`${fmt.dotPath}: ${fmt.message}`);
+    }
+  }
+  return messages.join("\n");
+};
+var formatValiIssue = function(issue) {
+  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
+  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
+    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
+    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
+    return fmt;
+  }
+  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
+  return { dotPath, message };
+};
+var idMaker = (_) => {
+  throw new Error("idMaker not set");
+};
+var SaneStringSchema = string([minLength(1), maxLength(80)]);
+var StringTableSchema = intersect([
+  record(SaneStringSchema, SaneStringSchema),
+  object({
+    en: nonOptional(SaneStringSchema, "An 'en' string is required")
+  })
+]);
+var LocalizableStringSchema = transform(union([SaneStringSchema, StringTableSchema]), (value) => typeof value === "string" ? { en: value } : value);
+var IdentifierSchema = string([
+  minLength(1),
+  maxLength(100),
+  regex(/^[0-9a-zA-Z-_.]*$/, "Use only A-Z, a-z, 0-9, hyphen (-), underscore (_), and period (.)")
+]);
+var VersionNumberSchema = number("Must be a number", [
+  safeInteger("Must be an integer"),
+  minValue(1)
+]);
+var VersionStringSchema = string("Must be a string", [
+  regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`)
+]);
+var ModuleSchema = union([SaneStringSchema, literal(true)]);
+var Entitlement;
+(function(Entitlement2) {
+  Entitlement2["Dynamic"] = "dynamic";
+  Entitlement2["Network"] = "network";
+})(Entitlement || (Entitlement = {}));
+var EntitlementsSchema = array(enum_(Entitlement, "Invalid entitlement"));
+var ExtensionCoreSchema = object({
+  name: nonOptional(LocalizableStringSchema, "A name is required"),
+  identifier: optional(IdentifierSchema),
+  "popclip version": optional(VersionNumberSchema),
+  "macos version": optional(VersionStringSchema),
+  module: optional(ModuleSchema),
+  entitlements: optional(EntitlementsSchema)
+});
+
+// src/loader.ts
+import {array as array2, object as object2, parse as parse3, string as string2} from "valibot";
+
+// src/parsers.ts
+import {parse as parsePlist} from "fast-plist";
+import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
+import {ValiError as ValiError2, parse as parse2, record as record2, unknown} from "valibot";
+function parsePlistObject(plist) {
+  try {
+    return parse2(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
+  } catch (e) {
+    if (e instanceof ValiError2) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid plist: ${e.message}`);
+    }
+    throw new Error("Invalid plist");
+  }
+}
+function parseJsonObject(jsonSource) {
+  try {
+    return parse2(VConfigObject, JSON.parse(jsonSource));
+  } catch (e) {
+    if (e instanceof ValiError2) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid JSON: ${e.message}`);
+    }
+    throw new Error("Invalid JSON");
+  }
+}
+function parseYamlObject(yamlSource) {
+  try {
+    return parse2(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
+  } catch (e) {
+    if (e instanceof ValiError2) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid YAML: ${e.message}`);
+    }
+    throw new Error("Invalid YAML");
+  }
+}
+var VConfigObject = record2(unknown());
 
 // src/std.ts
 import {lowerCase} from "case-anything";
@@ -83,142 +206,6 @@ function standardizeConfig(config2) {
   }
   return transformConfig(config2, standardizeKey);
 }
-
-// src/validate.ts
-function setPreferredLocalizations(pl) {
-  const { success, output } = safeParse(array(string()), pl);
-  preferredLocalizations = success ? output.map(standardizeKey) : ["en"];
-}
-function setIdMaker(maker) {
-  idMaker = maker;
-}
-function validateStaticConfig(config2) {
-  try {
-    const base = parse(ExtensionCoreSchema, config2);
-    if (!base.identifier) {
-      base.identifier = parse(IdentifierSchema, idMaker(base.name.canonical));
-    }
-    return base;
-  } catch (error) {
-    if (error instanceof ValiError) {
-      throw new Error(formatValiError(error));
-    }
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    throw new Error(`Invalid base config: ${msg}`);
-  }
-}
-var formatValiError = function(error) {
-  const messages = [];
-  for (const issue of error.issues) {
-    const fmt = formatValiIssue(issue);
-    if (fmt) {
-      messages.push(`${fmt.dotPath}: ${fmt.message}`);
-    }
-  }
-  return messages.join("\n");
-};
-var formatValiIssue = function(issue) {
-  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
-  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
-    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
-    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
-    return fmt;
-  }
-  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
-  return { dotPath, message };
-};
-var preferredLocalizations = [];
-var idMaker = (_) => {
-  throw new Error("idMaker not set");
-};
-var SaneStringSchema = string([minLength(1), maxLength(80)]);
-var StringTableSchema = intersect([
-  record(SaneStringSchema, SaneStringSchema),
-  object({
-    en: nonOptional(SaneStringSchema, "An 'en' string is required")
-  })
-]);
-var LocalizableStringSchema = transform(union([SaneStringSchema, StringTableSchema]), (value) => typeof value === "string" ? { en: value } : value);
-var ProcessedLocalizableStringSchema = transform(LocalizableStringSchema, (value) => {
-  const canonical = value.en;
-  const preferred = preferredLocalizations.map((key) => value[key]).find((v) => v) ?? canonical;
-  return { table: value, preferred, canonical };
-});
-var IdentifierSchema = string([
-  minLength(1),
-  maxLength(100),
-  regex(/^[0-9a-zA-Z-_.]*$/, "Use only A-Z, a-z, 0-9, hyphen (-), underscore (_), and period (.)")
-]);
-var VersionNumberSchema = number("Must be a number", [
-  safeInteger("Must be an integer"),
-  minValue(1)
-]);
-var VersionStringSchema = string("Must be a string", [
-  regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`)
-]);
-var ModuleSchema = union([SaneStringSchema, literal(true)]);
-var Entitlement;
-(function(Entitlement2) {
-  Entitlement2["Dynamic"] = "dynamic";
-  Entitlement2["Network"] = "network";
-})(Entitlement || (Entitlement = {}));
-var EntitlementsSchema = array(enum_(Entitlement, "Invalid entitlement"));
-var ExtensionCoreSchema = object({
-  name: nonOptional(ProcessedLocalizableStringSchema, "A name is required"),
-  identifier: optional(IdentifierSchema),
-  "popclip version": optional(VersionNumberSchema),
-  "macos version": optional(VersionStringSchema),
-  module: optional(ModuleSchema),
-  entitlements: optional(EntitlementsSchema)
-});
-
-// src/loader.ts
-import {array as array2, object as object2, parse as parse3, string as string2} from "valibot";
-
-// src/parsers.ts
-import {parse as parsePlist} from "fast-plist";
-import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
-import {ValiError as ValiError2, parse as parse2, record as record2, unknown} from "valibot";
-function parsePlistObject(plist) {
-  try {
-    return parse2(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
-  } catch (e) {
-    if (e instanceof ValiError2) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid plist: ${e.message}`);
-    }
-    throw new Error("Invalid plist");
-  }
-}
-function parseJsonObject(jsonSource) {
-  try {
-    return parse2(VConfigObject, JSON.parse(jsonSource));
-  } catch (e) {
-    if (e instanceof ValiError2) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid JSON: ${e.message}`);
-    }
-    throw new Error("Invalid JSON");
-  }
-}
-function parseYamlObject(yamlSource) {
-  try {
-    return parse2(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
-  } catch (e) {
-    if (e instanceof ValiError2) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid YAML: ${e.message}`);
-    }
-    throw new Error("Invalid YAML");
-  }
-}
-var VConfigObject = record2(unknown());
 
 // src/snippet.ts
 function lines(string2) {
@@ -394,11 +381,9 @@ var configFileNames = [
 
 // index.ts
 function init({
-  idMaker: idMaker2,
-  preferredLocalizations: preferredLocalizations2
+  idMaker: idMaker2
 }) {
   setIdMaker(idMaker2);
-  setPreferredLocalizations(preferredLocalizations2);
 }
 export {
   validateStaticConfig,

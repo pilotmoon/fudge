@@ -1,4 +1,4 @@
-import { setIdMaker, setPreferredLocalizations } from "./src/validate.js";
+import { setIdMaker } from "./src/validate.js";
 
 export { loadStaticConfig } from "./src/loader.js";
 export { validateStaticConfig } from "./src/validate.js";
@@ -7,11 +7,8 @@ export { standardizeConfig, standardizeKey } from "./src/std.js";
 export { Config as transform } from "./src/config.js";
 export function init({
   idMaker,
-  preferredLocalizations,
 }: {
   idMaker: (name: string) => string;
-  preferredLocalizations: string[];
 }) {
   setIdMaker(idMaker);
-  setPreferredLocalizations(preferredLocalizations);
 }

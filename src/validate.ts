@@ -25,19 +25,6 @@ import {
   literal,
 } from "valibot";
 import { log, logw } from "./log";
-import { standardizeKey } from "./std";
-
-// The preferred localizations for the current process.
-let preferredLocalizations: string[] = [];
-
-/**
- * Set the preferred localizations for the current process.
- * @param pl - An array of preferred localizations, in order of preference.
- */
-export function setPreferredLocalizations(pl?: string[]) {
-  const { success, output } = safeParse(array(string()), pl);
-  preferredLocalizations = success ? output.map(standardizeKey) : ["en"];
-}
 
 // generator function for when identifier is missing
 let idMaker: (name: string) => string = (_: string) => {
@@ -62,17 +49,6 @@ const StringTableSchema = intersect([
 const LocalizableStringSchema = transform(
   union([SaneStringSchema, StringTableSchema]),
   (value) => (typeof value === "string" ? { en: value } : value),
-);
-
-const ProcessedLocalizableStringSchema = transform(
-  LocalizableStringSchema,
-  (value) => {
-    const canonical = value.en;
-    const preferred =
-      preferredLocalizations.map((key) => value[key]).find((v) => v) ??
-      canonical;
-    return { table: value, preferred, canonical };
-  },
 );
 
 const IdentifierSchema = string([
@@ -103,7 +79,7 @@ enum Entitlement {
 const EntitlementsSchema = array(enum_(Entitlement, "Invalid entitlement"));
 
 const ExtensionCoreSchema = object({
-  name: nonOptional(ProcessedLocalizableStringSchema, "A name is required"),
+  name: nonOptional(LocalizableStringSchema, "A name is required"),
   identifier: optional(IdentifierSchema),
   "popclip version": optional(VersionNumberSchema),
   "macos version": optional(VersionStringSchema),
