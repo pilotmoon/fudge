@@ -1,10 +1,7 @@
-import { kebabCase } from "case-anything";
 import {
   Issue,
-  Output,
   ValiError,
   array,
-  flatten,
   safeInteger,
   intersect,
   maxLength,
@@ -15,7 +12,6 @@ import {
   parse,
   record,
   regex,
-  safeParse,
   string,
   transform,
   union,
@@ -25,14 +21,6 @@ import {
   literal,
 } from "valibot";
 import { log, logw } from "./log";
-
-// generator function for when identifier is missing
-let idMaker: (name: string) => string = (_: string) => {
-  throw new Error("idMaker not set");
-};
-export function setIdMaker(maker: (name: string) => string) {
-  idMaker = maker;
-}
 
 /***********************************************************
   Schemas
@@ -89,11 +77,7 @@ const ExtensionCoreSchema = object({
 
 export function validateStaticConfig(config: unknown) {
   try {
-    const base = parse(ExtensionCoreSchema, config);
-    if (!base.identifier) {
-      base.identifier = parse(IdentifierSchema, idMaker(base.name.canonical));
-    }
-    return base;
+    return parse(ExtensionCoreSchema, config);
   } catch (error) {
     if (error instanceof ValiError) {
       throw new Error(formatValiError(error));
