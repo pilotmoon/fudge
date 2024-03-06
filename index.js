@@ -18,7 +18,8 @@ transform,
 union,
 number,
 minValue,
-enum_
+enum_,
+literal
 } from "valibot";
 
 // src/std.ts
@@ -155,7 +156,7 @@ var VersionNumberSchema = number("Must be a number", [
 var VersionStringSchema = string("Must be a string", [
   regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`)
 ]);
-var ModuleSchema = SaneStringSchema;
+var ModuleSchema = union([SaneStringSchema, literal(true)]);
 var Entitlement;
 (function(Entitlement2) {
   Entitlement2["Dynamic"] = "dynamic";

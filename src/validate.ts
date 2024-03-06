@@ -93,8 +93,7 @@ const VersionStringSchema = string("Must be a string", [
   regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`),
 ]);
 
-// const ModuleSchema = union([SaneStringSchema, literal(true)]);
-const ModuleSchema = SaneStringSchema;
+const ModuleSchema = union([SaneStringSchema, literal(true)]);
 
 enum Entitlement {
   Dynamic = "dynamic",
