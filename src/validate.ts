@@ -42,10 +42,7 @@ const LocalizableStringSchema = transform(
 const IdentifierSchema = string([
   minLength(1),
   maxLength(100),
-  regex(
-    /^[0-9a-zA-Z-_.]*$/,
-    "Use only A-Z, a-z, 0-9, hyphen (-), underscore (_), and period (.)",
-  ),
+  regex(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/i, "Invalid identifier"),
 ]);
 
 const VersionNumberSchema = number("Must be a number", [
@@ -59,12 +56,7 @@ const VersionStringSchema = string("Must be a string", [
 
 const ModuleSchema = union([SaneStringSchema, literal(true)]);
 
-enum Entitlement {
-  Dynamic = "dynamic",
-  Network = "network",
-}
-
-const EntitlementsSchema = array(enum_(Entitlement, "Invalid entitlement"));
+const EntitlementsSchema = array(SaneStringSchema);
 
 const ExtensionCoreSchema = object({
   name: nonOptional(LocalizableStringSchema, "A name is required"),

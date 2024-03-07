@@ -298,7 +298,6 @@ transform,
 union,
 number,
 minValue,
-enum_,
 literal
 } from "valibot";
 function validateStaticConfig(config2) {
@@ -343,7 +342,7 @@ var LocalizableStringSchema = transform(union([SaneStringSchema, StringTableSche
 var IdentifierSchema = string2([
   minLength(1),
   maxLength(100),
-  regex(/^[0-9a-zA-Z-_.]*$/, "Use only A-Z, a-z, 0-9, hyphen (-), underscore (_), and period (.)")
+  regex(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/i, "Invalid identifier")
 ]);
 var VersionNumberSchema = number("Must be a number", [
   safeInteger("Must be an integer"),
@@ -353,12 +352,7 @@ var VersionStringSchema = string2("Must be a string", [
   regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`)
 ]);
 var ModuleSchema = union([SaneStringSchema, literal(true)]);
-var Entitlement;
-(function(Entitlement2) {
-  Entitlement2["Dynamic"] = "dynamic";
-  Entitlement2["Network"] = "network";
-})(Entitlement || (Entitlement = {}));
-var EntitlementsSchema = array2(enum_(Entitlement, "Invalid entitlement"));
+var EntitlementsSchema = array2(SaneStringSchema);
 var ExtensionCoreSchema = object2({
   name: nonOptional(LocalizableStringSchema, "A name is required"),
   identifier: optional(IdentifierSchema),
