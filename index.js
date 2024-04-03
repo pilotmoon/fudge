@@ -283,26 +283,29 @@ var configFileNames = [
 import {
 ValiError as ValiError2,
 array as array2,
-safeInteger,
 intersect,
+literal,
 maxLength,
+merge,
 minLength,
+minValue,
 nonOptional,
+null_,
+number,
 object as object2,
 optional,
 parse as parse3,
 record as record2,
 regex,
+safeInteger,
 string as string2,
 transform,
-union,
-number,
-minValue,
-literal
+union
 } from "valibot";
 function validateStaticConfig(config2) {
   try {
-    return parse3(ExtensionCoreSchema, config2);
+    const result = parse3(ExtensionSchema, config2);
+    return result;
   } catch (error) {
     if (error instanceof ValiError2) {
       throw new Error(formatValiError(error));
@@ -331,7 +334,7 @@ var formatValiIssue = function(issue) {
   const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
   return { dotPath, message };
 };
-var SaneStringSchema = string2([minLength(1), maxLength(80)]);
+var SaneStringSchema = string2([minLength(1), maxLength(500)]);
 var StringTableSchema = intersect([
   record2(SaneStringSchema, SaneStringSchema),
   object2({
@@ -353,14 +356,41 @@ var VersionStringSchema = string2("Must be a string", [
 ]);
 var ModuleSchema = union([SaneStringSchema, literal(true)]);
 var EntitlementsSchema = array2(SaneStringSchema);
-var ExtensionCoreSchema = object2({
-  name: nonOptional(LocalizableStringSchema, "A name is required"),
-  identifier: optional(IdentifierSchema),
-  "popclip version": optional(VersionNumberSchema),
-  "macos version": optional(VersionStringSchema),
-  module: optional(ModuleSchema),
-  entitlements: optional(EntitlementsSchema)
+var AppSchema = object2({
+  name: nonOptional(SaneStringSchema, "A name is required"),
+  link: nonOptional(string2(), "A link is required")
 });
+var ActionSchema = object2({
+  title: optional(LocalizableStringSchema),
+  icon: optional(union([string2(), null_()])),
+  app: optional(AppSchema),
+  apps: optional(array2(AppSchema)),
+  "service name": optional(string2()),
+  url: optional(string2()),
+  "key combo": optional(union([string2(), object2({})])),
+  "key combos": optional(array2(string2())),
+  applescript: optional(string2()),
+  "applescript file": optional(string2()),
+  "applescript call": optional(object2({})),
+  "shell script": optional(string2()),
+  "shell script file": optional(string2()),
+  javascript: optional(string2()),
+  "javascript file": optional(string2()),
+  "shortcut name": optional(string2())
+});
+var ExtensionSchema = merge([
+  object2({
+    name: nonOptional(LocalizableStringSchema, "A name is required"),
+    identifier: optional(IdentifierSchema),
+    "popclip version": optional(VersionNumberSchema),
+    "macos version": optional(VersionStringSchema),
+    module: optional(ModuleSchema),
+    entitlements: optional(EntitlementsSchema),
+    actions: optional(array2(ActionSchema)),
+    description: optional(LocalizableStringSchema)
+  }),
+  ActionSchema
+]);
 export {
   validateStaticConfig,
   standardizeKey,

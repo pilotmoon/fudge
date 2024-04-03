@@ -1,7 +1,7 @@
 declare global {
   // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
   // biome-ignore lint/style/noVar: go away
-  var console: any;
+  var console: Console;
   // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
   function print(...args: any[]): void;
 }
@@ -18,8 +18,11 @@ export function log(...args: any[]) {
 export function loge(...args: any[]) {
   if (typeof print === "function") {
     print(...args);
-  } else if (typeof console === "object" && typeof console.err === "function") {
-    console.err(...args);
+  } else if (
+    typeof console === "object" &&
+    typeof console.error === "function"
+  ) {
+    console.error(...args);
   }
 }
 // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
