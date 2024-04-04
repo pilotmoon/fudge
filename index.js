@@ -294,6 +294,7 @@ nonOptional,
 null_,
 number as number2,
 object as object3,
+omit,
 optional as optional2,
 parse as parse4,
 record as record2,
@@ -598,7 +599,7 @@ var ExtensionSchema = merge([
     "options script file": optional2(SaneStringSchema),
     description: optional2(LocalizableStringSchema)
   }),
-  ActionSchema
+  omit(ActionSchema, ["title"])
 ]);
 export {
   validateStaticConfig,
