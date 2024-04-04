@@ -26,38 +26,25 @@ const BooleanAsString = v.union([
 // these are in reverse order of precedence
 const SHAPE_NAMES = ["search", "circle", "square"];
 
+export const IconParamsSchema = v.object({
+  "preserve color": v.optional(BooleanAsString, undefined),
+  "preserve aspect": v.optional(BooleanAsString, undefined),
+  shape: v.optional(v.picklist(SHAPE_NAMES), undefined),
+  filled: v.optional(BooleanAsString, false),
+  strike: v.optional(BooleanAsString, false),
+  monospaced: v.optional(BooleanAsString, false),
+  "flip x": v.optional(BooleanAsString, false),
+  "flip y": v.optional(BooleanAsString, false),
+  "move x": v.optional(NumberAsString, 0),
+  "move y": v.optional(NumberAsString, 0),
+  scale: v.optional(NumberAsString, 100),
+  rotate: v.optional(NumberAsString, 0),
+});
+
 // default modifier values
 const defaultModifierValues = new Map(
-  Object.entries({
-    "preserve aspect": undefined,
-    "preserve color": undefined,
-    shape: undefined,
-    filled: false,
-    strike: false,
-    monospaced: false,
-    "flip x": false,
-    "flip y": false,
-    "move x": 0,
-    "move y": 0,
-    scale: 100,
-    rotate: 0,
-  }),
+  Object.entries(v.getDefaults(IconParamsSchema) as {}),
 );
-
-export const IconParamsSchema = v.object({
-  "preserve color": v.optional(BooleanAsString),
-  "preserve aspect": v.optional(BooleanAsString),
-  shape: v.optional(v.picklist(SHAPE_NAMES)),
-  filled: v.optional(BooleanAsString),
-  strike: v.optional(BooleanAsString),
-  monospaced: v.optional(BooleanAsString),
-  "flip x": v.optional(BooleanAsString),
-  "flip y": v.optional(BooleanAsString),
-  "move x": v.optional(NumberAsString),
-  "move y": v.optional(NumberAsString),
-  scale: v.optional(NumberAsString),
-  rotate: v.optional(NumberAsString),
-});
 
 function renderModifier(key: string, value: unknown) {
   key = kebabCase(key);
@@ -100,10 +87,7 @@ export function standardizeIcon(specifier: string, extraParams: unknown) {
     ...parsed.modifiers,
     ...standardizeConfig(extraParams),
   });
-  console.log("extraParams", extraParams);
-  console.log("merged", merged);
   for (const [key, value] of Object.entries(merged)) {
-    console.log(key, value, defaultModifierValues.get(key));
     if (value === defaultModifierValues.get(key)) {
       delete merged[key];
     }
