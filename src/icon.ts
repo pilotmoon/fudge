@@ -80,7 +80,7 @@ function descriptorStringFromComponents({
   return `${modifierString} ${prefix}:${payload}`.trim();
 }
 
-export function standardizeIcon(specifier: string, extraParams: Config) {
+export function standardizeIcon(specifier: string, extraParams: unknown) {
   const parsed = parseDescriptorString(specifier);
   if (!parsed.ok) {
     return parsed;

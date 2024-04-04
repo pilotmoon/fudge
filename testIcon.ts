@@ -1,4 +1,5 @@
-import { standardizeIcon, type IconParams } from "./src/icon.js";
+import { Config } from "./src/config.js";
+import { standardizeIcon } from "./src/icon.js";
 const sy = require("fast-stable-stringify");
 import axios from "axios";
 
@@ -82,7 +83,7 @@ const testData = [
   },
 ];
 
-async function parseRemotely(specifier: string, extraParams: IconParams) {
+async function parseRemotely(specifier: string, extraParams: unknown) {
   function querify(val: unknown) {
     if (typeof val === "boolean") {
       return val ? "1" : "0";
@@ -123,12 +124,9 @@ const fails: number[] = [];
 for (const { specifier, extraParams } of testData) {
   console.log(`\nTEST ${++count}:`);
   console.log(specifier, extraParams);
-  const remoteExpected = await parseRemotely(
-    specifier,
-    extraParams as IconParams,
-  );
+  const remoteExpected = await parseRemotely(specifier, extraParams);
   console.log("remoteExpected", remoteExpected);
-  const result = standardizeIcon(specifier, (extraParams as IconParams) ?? {});
+  const result = standardizeIcon(specifier, extraParams ?? {});
   console.log("result", result);
 
   // compare results

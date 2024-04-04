@@ -392,10 +392,180 @@ var ExtensionSchema = merge([
   }),
   ActionSchema
 ]);
+// src/icon.ts
+import emojiRegex from "emoji-regex";
+
+// src/log.ts
+function log(...args) {
+  if (typeof print === "function") {
+    print(...args);
+  } else if (typeof console === "object" && typeof console.log === "function") {
+    console.log(...args);
+  }
+}
+
+// src/icon.ts
+import * as v from "valibot";
+import {kebabCase} from "case-anything";
+function isSingleEmoji(string4) {
+  return r.test(string4);
+}
+var renderModifier = function(key, value) {
+  key = kebabCase(key);
+  if (key === "shape" && typeof value === "string") {
+    return SHAPE_NAMES.includes(value) ? value : "";
+  }
+  if (typeof value === "boolean")
+    return value ? key : `${key}=0`;
+  if (typeof value === "number")
+    return `${key}=${value.toString()}`;
+  if (typeof value === "string")
+    return `${key}=${value}`;
+  return "";
+};
+var descriptorStringFromComponents = function({
+  prefix,
+  payload,
+  modifiers
+}) {
+  const modifierString = Object.entries(modifiers).map(([key, value]) => renderModifier(key, value)).filter((x) => x.length > 0).join(" ");
+  return `${modifierString} ${prefix}:${payload}`.trim();
+};
+function standardizeIcon(specifier, extraParams) {
+  const parsed = parseDescriptorString(specifier);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  for (const shape of SHAPE_NAMES) {
+    if (parsed.modifiers?.[shape]) {
+      parsed.modifiers.shape = shape;
+      delete parsed.modifiers[shape];
+    }
+  }
+  const merged = v.parse(IconParamsSchema, {
+    ...parsed.modifiers,
+    ...standardizeConfig(extraParams)
+  });
+  console.log("extraParams", extraParams);
+  console.log("merged", merged);
+  for (const [key, value] of Object.entries(merged)) {
+    console.log(key, value, defaultModifierValues.get(key));
+    if (value === defaultModifierValues.get(key)) {
+      delete merged[key];
+    }
+  }
+  parsed.modifiers = merged;
+  return {
+    specifier: descriptorStringFromComponents(parsed),
+    ...parsed
+  };
+}
+var parseDescriptorString = function(string4) {
+  string4 = string4.trim();
+  {
+    const components2 = string4.match(/^(?:text:)?\[\[(.{1,3})\]\]$/);
+    if (components2)
+      string4 = `square filled ${components2[1]}`;
+  }
+  {
+    const components2 = string4.match(/^text:((?:[a-z]{2,10} )+)(\S{1,3}|\S \S)/);
+    if (components2)
+      string4 = `${components2[1]}text:${components2[2]}`;
+  }
+  {
+    const components2 = string4.match(/^[^:]+\.(svg|png)$/i);
+    if (components2)
+      string4 = `file:${components2[0]}`;
+  }
+  if (isSingleEmoji(string4)) {
+    log("single emoji detected");
+    return {
+      ok: true,
+      prefix: "text",
+      payload: string4,
+      modifiers: {}
+    };
+  }
+  const components = string4.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/i);
+  if (!components) {
+    return {
+      ok: false,
+      error: `invalid icon descriptor: '${string4}'`
+    };
+  }
+  const modifiers = parseModifierString(components[1].trim());
+  let specifier = components[2];
+  if (specifier.length <= 3) {
+    specifier = `text:${specifier}`;
+  }
+  const match = specifier.match(/^([a-z_]+):(.*)$/i);
+  if (!match) {
+    return {
+      ok: false,
+      error: `invalid icon specifier: '${specifier}'`
+    };
+  }
+  const prefix = match[1];
+  const payload = match[2];
+  return { ok: true, prefix, payload, modifiers };
+};
+var parseModifierString = function(modifiers) {
+  const result = {};
+  if (modifiers.length > 0) {
+    for (const str of modifiers.split(" ")) {
+      const regex2 = /^([a-z_-]+)(?:=([+-]?[0-9a-z]{0,6}))?$/i;
+      const components = str.match(regex2);
+      if (components && components.length === 3) {
+        result[standardizeKey(components[1])] = components[2] ?? true;
+      }
+    }
+  }
+  return result;
+};
+var r = new RegExp("^(" + emojiRegex().source + ")$");
+var NumberAsString = v.union([
+  v.number(),
+  v.transform(v.string(), (x) => Number(x))
+]);
+var BooleanAsString = v.union([
+  v.boolean(),
+  v.transform(v.string(), (x) => x === "" || x === "1")
+]);
+var SHAPE_NAMES = ["search", "circle", "square"];
+var defaultModifierValues = new Map(Object.entries({
+  "preserve aspect": undefined,
+  "preserve color": undefined,
+  shape: undefined,
+  filled: false,
+  strike: false,
+  monospaced: false,
+  "flip x": false,
+  "flip y": false,
+  "move x": 0,
+  "move y": 0,
+  scale: 100,
+  rotate: 0
+}));
+var IconParamsSchema = v.object({
+  "preserve color": v.optional(BooleanAsString),
+  "preserve aspect": v.optional(BooleanAsString),
+  shape: v.optional(v.picklist(SHAPE_NAMES)),
+  filled: v.optional(BooleanAsString),
+  strike: v.optional(BooleanAsString),
+  monospaced: v.optional(BooleanAsString),
+  "flip x": v.optional(BooleanAsString),
+  "flip y": v.optional(BooleanAsString),
+  "move x": v.optional(NumberAsString),
+  "move y": v.optional(NumberAsString),
+  scale: v.optional(NumberAsString),
+  rotate: v.optional(NumberAsString)
+});
 export {
   validateStaticConfig,
   standardizeKey,
+  standardizeIcon,
   standardizeConfig,
   loadStaticConfig,
+  isSingleEmoji,
   configFromText
 };
