@@ -30,6 +30,8 @@ import {
 ***********************************************************/
 const SaneStringSchema = string([minLength(1), maxLength(500)]);
 
+const NullOrFalseSchema = union([null_(), literal(false)]);
+
 const StringTableSchema = intersect([
   record(SaneStringSchema, SaneStringSchema),
   object({
@@ -68,7 +70,7 @@ const AppSchema = object({
 
 const ActionSchema = object({
   title: optional(LocalizableStringSchema),
-  icon: optional(union([string(), null_()])),
+  icon: optional(union([string(), null_(), literal(false)])),
   app: optional(AppSchema),
   apps: optional(array(AppSchema)),
   "service name": optional(string()),

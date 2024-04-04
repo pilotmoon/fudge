@@ -335,6 +335,7 @@ var formatValiIssue = function(issue) {
   return { dotPath, message };
 };
 var SaneStringSchema = string2([minLength(1), maxLength(500)]);
+var NullOrFalseSchema = union([null_(), literal(false)]);
 var StringTableSchema = intersect([
   record2(SaneStringSchema, SaneStringSchema),
   object2({
@@ -362,7 +363,7 @@ var AppSchema = object2({
 });
 var ActionSchema = object2({
   title: optional(LocalizableStringSchema),
-  icon: optional(union([string2(), null_()])),
+  icon: optional(union([string2(), null_(), literal(false)])),
   app: optional(AppSchema),
   apps: optional(array2(AppSchema)),
   "service name": optional(string2()),
