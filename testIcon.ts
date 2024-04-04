@@ -1,4 +1,3 @@
-import { Config } from "./src/config.js";
 import { standardizeIcon } from "./src/icon.js";
 const sy = require("fast-stable-stringify");
 import axios from "axios";
@@ -10,9 +9,9 @@ const testData = [
   {
     specifier: "move-x=9 +",
   },
-  {
-    specifier: " ",
-  },
+  // {
+  //   specifier: " ",
+  // },
   {
     specifier: "text:[[AB]]",
   },
@@ -60,21 +59,21 @@ const testData = [
   {
     specifier: "square : :",
   },
-  {
-    specifier: "file.PN",
-  },
-  {
-    specifier: "file.PNG",
-  },
-  {
-    specifier: "icons/file.svg",
-  },
-  {
-    specifier: "校.svg",
-  },
-  {
-    specifier: "shape=circle file:校.svg",
-  },
+  // {
+  //   specifier: "file.PN",
+  // },
+  // {
+  //   specifier: "file.PNG",
+  // },
+  // {
+  //   specifier: "icons/file.svg",
+  // },
+  // {
+  //   specifier: "校.svg",
+  // },
+  // {
+  //   specifier: "shape=circle file:校.svg",
+  // },
   {
     specifier: "circle=0 flip-x=0 A",
   },

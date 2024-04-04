@@ -283,6 +283,7 @@ var configFileNames = [
 import {
 ValiError as ValiError2,
 array as array2,
+boolean as boolean2,
 intersect,
 literal,
 maxLength,
@@ -291,109 +292,22 @@ minLength,
 minValue,
 nonOptional,
 null_,
-number,
-object as object2,
-optional,
-parse as parse3,
+number as number2,
+object as object3,
+optional as optional2,
+parse as parse4,
 record as record2,
 regex,
 safeInteger,
-string as string2,
-transform,
-union
+string as string3,
+transform as transform2,
+union as union2
 } from "valibot";
-function validateStaticConfig(config2) {
-  try {
-    const result = parse3(ExtensionSchema, config2);
-    return result;
-  } catch (error) {
-    if (error instanceof ValiError2) {
-      throw new Error(formatValiError(error));
-    }
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    throw new Error(`Invalid base config: ${msg}`);
-  }
-}
-var formatValiError = function(error) {
-  const messages = [];
-  for (const issue of error.issues) {
-    const fmt = formatValiIssue(issue);
-    if (fmt) {
-      messages.push(`${fmt.dotPath}: ${fmt.message}`);
-    }
-  }
-  return messages.join("\n");
-};
-var formatValiIssue = function(issue) {
-  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
-  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
-    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
-    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
-    return fmt;
-  }
-  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
-  return { dotPath, message };
-};
-var SaneStringSchema = string2([minLength(1), maxLength(500)]);
-var NullOrFalseSchema = union([null_(), literal(false)]);
-var StringTableSchema = intersect([
-  record2(SaneStringSchema, SaneStringSchema),
-  object2({
-    en: nonOptional(SaneStringSchema, "An 'en' string is required")
-  })
-]);
-var LocalizableStringSchema = transform(union([SaneStringSchema, StringTableSchema]), (value) => typeof value === "string" ? { en: value } : value);
-var IdentifierSchema = string2([
-  minLength(1),
-  maxLength(100),
-  regex(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/i, "Invalid identifier")
-]);
-var VersionNumberSchema = number("Must be a number", [
-  safeInteger("Must be an integer"),
-  minValue(1)
-]);
-var VersionStringSchema = string2("Must be a string", [
-  regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`)
-]);
-var ModuleSchema = union([SaneStringSchema, literal(true)]);
-var EntitlementsSchema = array2(SaneStringSchema);
-var AppSchema = object2({
-  name: nonOptional(SaneStringSchema, "A name is required"),
-  link: nonOptional(string2(), "A link is required")
-});
-var ActionSchema = object2({
-  title: optional(LocalizableStringSchema),
-  icon: optional(union([string2(), null_(), literal(false)])),
-  app: optional(AppSchema),
-  apps: optional(array2(AppSchema)),
-  "service name": optional(string2()),
-  url: optional(string2()),
-  "key combo": optional(union([string2(), object2({})])),
-  "key combos": optional(array2(string2())),
-  applescript: optional(string2()),
-  "applescript file": optional(string2()),
-  "applescript call": optional(object2({})),
-  "shell script": optional(string2()),
-  "shell script file": optional(string2()),
-  javascript: optional(string2()),
-  "javascript file": optional(string2()),
-  "shortcut name": optional(string2())
-});
-var ExtensionSchema = merge([
-  object2({
-    name: nonOptional(LocalizableStringSchema, "A name is required"),
-    identifier: optional(IdentifierSchema),
-    "popclip version": optional(VersionNumberSchema),
-    "macos version": optional(VersionStringSchema),
-    module: optional(ModuleSchema),
-    entitlements: optional(EntitlementsSchema),
-    actions: optional(array2(ActionSchema)),
-    description: optional(LocalizableStringSchema)
-  }),
-  ActionSchema
-]);
+
 // src/icon.ts
+import {kebabCase} from "case-anything";
 import emojiRegex from "emoji-regex";
+import * as v from "valibot";
 
 // src/log.ts
 function log(...args) {
@@ -405,10 +319,8 @@ function log(...args) {
 }
 
 // src/icon.ts
-import * as v from "valibot";
-import {kebabCase} from "case-anything";
-function isSingleEmoji(string4) {
-  return r.test(string4);
+function isSingleEmoji(string3) {
+  return r.test(string3);
 }
 var renderModifier = function(key, value) {
   key = kebabCase(key);
@@ -460,37 +372,37 @@ function standardizeIcon(specifier, extraParams) {
     ...parsed
   };
 }
-var parseDescriptorString = function(string4) {
-  string4 = string4.trim();
+var parseDescriptorString = function(string3) {
+  string3 = string3.trim();
   {
-    const components2 = string4.match(/^(?:text:)?\[\[(.{1,3})\]\]$/);
+    const components2 = string3.match(/^(?:text:)?\[\[(.{1,3})\]\]$/);
     if (components2)
-      string4 = `square filled ${components2[1]}`;
+      string3 = `square filled ${components2[1]}`;
   }
   {
-    const components2 = string4.match(/^text:((?:[a-z]{2,10} )+)(\S{1,3}|\S \S)/);
+    const components2 = string3.match(/^text:((?:[a-z]{2,10} )+)(\S{1,3}|\S \S)/);
     if (components2)
-      string4 = `${components2[1]}text:${components2[2]}`;
+      string3 = `${components2[1]}text:${components2[2]}`;
   }
   {
-    const components2 = string4.match(/^[^:]+\.(svg|png)$/i);
+    const components2 = string3.match(/^[^:]+\.(svg|png)$/i);
     if (components2)
-      string4 = `file:${components2[0]}`;
+      string3 = `file:${components2[0]}`;
   }
-  if (isSingleEmoji(string4)) {
+  if (isSingleEmoji(string3)) {
     log("single emoji detected");
     return {
       ok: true,
       prefix: "text",
-      payload: string4,
+      payload: string3,
       modifiers: {}
     };
   }
-  const components = string4.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/i);
+  const components = string3.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/i);
   if (!components) {
     return {
       ok: false,
-      error: `invalid icon descriptor: '${string4}'`
+      error: `invalid icon descriptor: '${string3}'`
     };
   }
   const modifiers = parseModifierString(components[1].trim());
@@ -513,8 +425,8 @@ var parseModifierString = function(modifiers) {
   const result = {};
   if (modifiers.length > 0) {
     for (const str of modifiers.split(" ")) {
-      const regex2 = /^([a-z_-]+)(?:=([+-]?[0-9a-z]{0,6}))?$/i;
-      const components = str.match(regex2);
+      const regex = /^([a-z_-]+)(?:=([+-]?[0-9a-z]{0,6}))?$/i;
+      const components = str.match(regex);
       if (components && components.length === 3) {
         result[standardizeKey(components[1])] = components[2] ?? true;
       }
@@ -522,6 +434,7 @@ var parseModifierString = function(modifiers) {
   }
   return result;
 };
+log("ereg", JSON.stringify(emojiRegex, null, 2));
 var r = new RegExp("^(" + emojiRegex().source + ")$");
 var NumberAsString = v.union([
   v.number(),
@@ -560,6 +473,149 @@ var IconParamsSchema = v.object({
   scale: v.optional(NumberAsString),
   rotate: v.optional(NumberAsString)
 });
+
+// src/validate.ts
+function validateStaticConfig(config2) {
+  try {
+    const result = parse4(ExtensionSchema, config2);
+    return result;
+  } catch (error) {
+    if (error instanceof ValiError2) {
+      throw new Error(formatValiError(error));
+    }
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Invalid base config: ${msg}`);
+  }
+}
+var formatValiError = function(error) {
+  const messages = [];
+  for (const issue of error.issues) {
+    const fmt = formatValiIssue(issue);
+    if (fmt) {
+      messages.push(`${fmt.dotPath}: ${fmt.message}`);
+    }
+  }
+  return messages.join("\n");
+};
+var formatValiIssue = function(issue) {
+  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
+  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
+    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
+    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
+    return fmt;
+  }
+  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
+  return { dotPath, message };
+};
+var SaneStringSchema = string3([minLength(1), maxLength(500)]);
+var SaneStringSchemaAllowingEmpty = string3([maxLength(500)]);
+var StringTableSchema = intersect([
+  record2(SaneStringSchema, SaneStringSchema),
+  object3({
+    en: nonOptional(SaneStringSchema, "An 'en' string is required")
+  })
+]);
+var LocalizableStringSchema = transform2(union2([SaneStringSchema, StringTableSchema]), (value) => typeof value === "string" ? { en: value } : value);
+var IdentifierSchema = string3([
+  minLength(1),
+  maxLength(100),
+  regex(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/i, "Invalid identifier")
+]);
+var VersionNumberSchema = number2("Must be a number", [
+  safeInteger("Must be an integer"),
+  minValue(1)
+]);
+var VersionStringSchema = string3("Must be a string", [
+  regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`)
+]);
+var ModuleSchema = union2([SaneStringSchema, literal(true)]);
+var EntitlementsSchema = array2(SaneStringSchema);
+var AppSchema = object3({
+  name: nonOptional(SaneStringSchema, "A name is required"),
+  link: nonOptional(string3(), "A link is required"),
+  "check installed": optional2(boolean2()),
+  "bundle identifier": optional2(SaneStringSchema),
+  "bundle identifiers": optional2(array2(SaneStringSchema))
+});
+var OptionsSchema = object3({
+  identifier: nonOptional(SaneStringSchema),
+  type: nonOptional(SaneStringSchema),
+  label: optional2(LocalizableStringSchema),
+  description: optional2(LocalizableStringSchema),
+  values: optional2(array2(SaneStringSchemaAllowingEmpty)),
+  "value labels": optional2(array2(LocalizableStringSchema)),
+  "default value": optional2(union2([SaneStringSchemaAllowingEmpty, boolean2()])),
+  icon: optional2(string3()),
+  hidden: optional2(boolean2()),
+  inset: optional2(boolean2())
+});
+var KeyComboSchema = union2([
+  number2(),
+  SaneStringSchema,
+  object3({
+    "key code": optional2(number2()),
+    "key char": optional2(string3([minLength(1), maxLength(1)])),
+    modifiers: nonOptional(number2())
+  })
+]);
+var ActionSchema = merge([
+  IconParamsSchema,
+  object3({
+    title: optional2(LocalizableStringSchema),
+    icon: optional2(union2([string3(), null_(), literal(false)])),
+    identifier: optional2(IdentifierSchema),
+    app: optional2(AppSchema),
+    apps: optional2(array2(AppSchema)),
+    "capture html": optional2(boolean2()),
+    "capture rtf": optional2(boolean2()),
+    "stay visible": optional2(boolean2()),
+    "restore pasteboard": optional2(boolean2()),
+    requirements: optional2(array2(SaneStringSchema)),
+    "required apps": optional2(array2(SaneStringSchema)),
+    "excluded apps": optional2(array2(SaneStringSchema)),
+    regex: optional2(string3()),
+    before: optional2(SaneStringSchema),
+    after: optional2(SaneStringSchema),
+    permissions: optional2(array2(SaneStringSchema)),
+    "service name": optional2(string3()),
+    url: optional2(SaneStringSchema),
+    "alternate url": optional2(SaneStringSchema),
+    "clean query": optional2(boolean2()),
+    "key combo": optional2(KeyComboSchema),
+    "key combos": optional2(array2(KeyComboSchema)),
+    applescript: optional2(string3()),
+    "applescript file": optional2(string3()),
+    "applescript call": optional2(object3({
+      file: optional2(SaneStringSchema),
+      handler: nonOptional(SaneStringSchema),
+      parameters: optional2(array2(SaneStringSchema))
+    })),
+    "shell script": optional2(string3()),
+    "shell script file": optional2(SaneStringSchema),
+    interpreter: optional2(SaneStringSchema),
+    stdin: optional2(SaneStringSchema),
+    javascript: optional2(string3()),
+    "javascript file": optional2(string3()),
+    "shortcut name": optional2(string3())
+  })
+]);
+var ExtensionSchema = merge([
+  object3({
+    name: nonOptional(LocalizableStringSchema, "A name is required"),
+    "popclip version": optional2(VersionNumberSchema),
+    "macos version": optional2(VersionStringSchema),
+    entitlements: optional2(EntitlementsSchema),
+    module: optional2(ModuleSchema),
+    language: optional2(SaneStringSchema),
+    action: optional2(ActionSchema),
+    actions: optional2(array2(ActionSchema)),
+    options: optional2(array2(OptionsSchema)),
+    "options title": optional2(LocalizableStringSchema),
+    "options script file": optional2(SaneStringSchema),
+    description: optional2(LocalizableStringSchema)
+  }),
+  ActionSchema
+]);
 export {
   validateStaticConfig,
   standardizeKey,

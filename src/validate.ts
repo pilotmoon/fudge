@@ -1,9 +1,8 @@
 import {
-  Output,
   SchemaIssue,
   ValiError,
   array,
-  enum_,
+  boolean,
   intersect,
   literal,
   maxLength,
@@ -16,7 +15,6 @@ import {
   object,
   optional,
   parse,
-  picklist,
   record,
   regex,
   safeInteger,
@@ -24,13 +22,13 @@ import {
   transform,
   union,
 } from "valibot";
+import { IconParamsSchema } from "./icon";
 
 /***********************************************************
   Schemas
 ***********************************************************/
 const SaneStringSchema = string([minLength(1), maxLength(500)]);
-
-const NullOrFalseSchema = union([null_(), literal(false)]);
+const SaneStringSchemaAllowingEmpty = string([maxLength(500)]);
 
 const StringTableSchema = intersect([
   record(SaneStringSchema, SaneStringSchema),
@@ -66,36 +64,113 @@ const EntitlementsSchema = array(SaneStringSchema);
 const AppSchema = object({
   name: nonOptional(SaneStringSchema, "A name is required"),
   link: nonOptional(string(), "A link is required"),
+  "check installed": optional(boolean()),
+  "bundle identifier": optional(SaneStringSchema),
+  "bundle identifiers": optional(array(SaneStringSchema)),
 });
 
-const ActionSchema = object({
-  title: optional(LocalizableStringSchema),
-  icon: optional(union([string(), null_(), literal(false)])),
-  app: optional(AppSchema),
-  apps: optional(array(AppSchema)),
-  "service name": optional(string()),
-  url: optional(string()),
-  "key combo": optional(union([string(), object({})])),
-  "key combos": optional(array(string())),
-  applescript: optional(string()),
-  "applescript file": optional(string()),
-  "applescript call": optional(object({})),
-  "shell script": optional(string()),
-  "shell script file": optional(string()),
-  javascript: optional(string()),
-  "javascript file": optional(string()),
-  "shortcut name": optional(string()),
+const OptionsSchema = object({
+  identifier: nonOptional(SaneStringSchema),
+  type: nonOptional(SaneStringSchema),
+  label: optional(LocalizableStringSchema),
+  description: optional(LocalizableStringSchema),
+  values: optional(array(SaneStringSchemaAllowingEmpty)),
+  "value labels": optional(array(LocalizableStringSchema)),
+  "default value": optional(union([SaneStringSchemaAllowingEmpty, boolean()])),
+  icon: optional(string()),
+  hidden: optional(boolean()),
+  inset: optional(boolean()),
 });
+
+const KeyComboSchema = union([
+  number(),
+  SaneStringSchema,
+  object({
+    "key code": optional(number()),
+    "key char": optional(string([minLength(1), maxLength(1)])),
+    modifiers: nonOptional(number()),
+  }),
+]);
+
+const ActionSchema = merge([
+  IconParamsSchema,
+  object({
+    // common fields
+    title: optional(LocalizableStringSchema),
+    icon: optional(union([string(), null_(), literal(false)])),
+    identifier: optional(IdentifierSchema),
+    app: optional(AppSchema),
+    apps: optional(array(AppSchema)),
+    "capture html": optional(boolean()),
+    "capture rtf": optional(boolean()),
+    "stay visible": optional(boolean()),
+    "restore pasteboard": optional(boolean()),
+    requirements: optional(array(SaneStringSchema)),
+    "required apps": optional(array(SaneStringSchema)),
+    "excluded apps": optional(array(SaneStringSchema)),
+    regex: optional(string()),
+    before: optional(SaneStringSchema),
+    after: optional(SaneStringSchema),
+    permissions: optional(array(SaneStringSchema)),
+
+    // service actions
+    "service name": optional(string()),
+
+    // url actions
+    url: optional(SaneStringSchema),
+    "alternate url": optional(SaneStringSchema),
+    "clean query": optional(boolean()),
+
+    // key compo actions
+    "key combo": optional(KeyComboSchema),
+    "key combos": optional(array(KeyComboSchema)),
+
+    // applescript actions
+    applescript: optional(string()),
+    "applescript file": optional(string()),
+    "applescript call": optional(
+      object({
+        file: optional(SaneStringSchema),
+        handler: nonOptional(SaneStringSchema),
+        parameters: optional(array(SaneStringSchema)),
+      }),
+    ),
+
+    // shell script actions
+    "shell script": optional(string()),
+    "shell script file": optional(SaneStringSchema),
+    interpreter: optional(SaneStringSchema),
+    stdin: optional(SaneStringSchema),
+
+    // javascript actions
+    javascript: optional(string()),
+    "javascript file": optional(string()),
+
+    // shortcut actions
+    "shortcut name": optional(string()),
+  }),
+]);
 
 const ExtensionSchema = merge([
   object({
     name: nonOptional(LocalizableStringSchema, "A name is required"),
-    identifier: optional(IdentifierSchema),
     "popclip version": optional(VersionNumberSchema),
     "macos version": optional(VersionStringSchema),
-    module: optional(ModuleSchema),
     entitlements: optional(EntitlementsSchema),
+
+    module: optional(ModuleSchema),
+    language: optional(SaneStringSchema),
+
+    // actions
+    action: optional(ActionSchema),
     actions: optional(array(ActionSchema)),
+
+    // options
+    options: optional(array(OptionsSchema)),
+    "options title": optional(LocalizableStringSchema),
+    "options script file": optional(SaneStringSchema),
+
+    // meta
     description: optional(LocalizableStringSchema),
   }),
   ActionSchema,

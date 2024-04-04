@@ -1,9 +1,11 @@
-import { standardizeConfig, standardizeKey } from "./std.js";
-import emojiRegex from "emoji-regex";
-import { log } from "./log.js";
-import { Config } from "./config.js";
-import * as v from "valibot";
 import { kebabCase } from "case-anything";
+import emojiRegex from "emoji-regex";
+import * as v from "valibot";
+import { Config } from "./config.js";
+import { log } from "./log.js";
+import { standardizeConfig, standardizeKey } from "./std.js";
+
+log("ereg", JSON.stringify(emojiRegex, null, 2));
 
 // Emji detector utilty
 const r = new RegExp("^(" + emojiRegex().source + ")$");
@@ -42,7 +44,7 @@ const defaultModifierValues = new Map(
   }),
 );
 
-const IconParamsSchema = v.object({
+export const IconParamsSchema = v.object({
   "preserve color": v.optional(BooleanAsString),
   "preserve aspect": v.optional(BooleanAsString),
   shape: v.optional(v.picklist(SHAPE_NAMES)),
