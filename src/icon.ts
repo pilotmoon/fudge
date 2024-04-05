@@ -161,12 +161,12 @@ function parseDescriptorString(string: string) {
 
   // extract modifiers and the specifier
   const components = string.match(
-    /^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/i,
+    /^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/is,
   );
   if (!components) {
     return {
       ok: false as const,
-      error: `invalid icon descriptor: '${string}'`,
+      error: `invalid icon string: '${string}'`,
     };
   }
 
@@ -180,7 +180,7 @@ function parseDescriptorString(string: string) {
   }
 
   // parse the specifier
-  const match = specifier.match(/^([a-z_]+):(.*)$/i);
+  const match = specifier.match(/^([a-z_]+):(.*)$/is);
   if (!match) {
     return {
       ok: false as const,

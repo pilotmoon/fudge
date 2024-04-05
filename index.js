@@ -422,11 +422,11 @@ var parseDescriptorString = function(string3) {
       }
     };
   }
-  const components = string3.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/i);
+  const components = string3.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/is);
   if (!components) {
     return {
       ok: false,
-      error: `invalid icon descriptor: '${string3}'`
+      error: `invalid icon string: '${string3}'`
     };
   }
   const modifiers = parseModifierString(components[1].trim());
@@ -434,7 +434,7 @@ var parseDescriptorString = function(string3) {
   if (specifier.length <= 3) {
     specifier = `text:${specifier}`;
   }
-  const match = specifier.match(/^([a-z_]+):(.*)$/i);
+  const match = specifier.match(/^([a-z_]+):(.*)$/is);
   if (!match) {
     return {
       ok: false,
