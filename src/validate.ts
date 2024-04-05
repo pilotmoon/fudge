@@ -15,7 +15,6 @@ import {
   null_,
   number,
   object,
-  omit,
   optional,
   parse,
   record,
@@ -213,10 +212,7 @@ const ExtensionCoreSchema = object({
   "options script file": optional(null_("Not supported")),
 });
 
-const ExtensionSchema = merge([
-  ExtensionCoreSchema,
-  omit(ActionSchema, ["title"]),
-]);
+const ExtensionSchema = merge([ExtensionCoreSchema, ActionSchema]);
 
 export function validateStaticConfig(config: unknown) {
   try {

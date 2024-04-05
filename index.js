@@ -296,7 +296,6 @@ nonOptional,
 null_,
 number as number2,
 object as object3,
-omit,
 optional as optional2,
 parse as parse4,
 record as record2,
@@ -657,10 +656,7 @@ var ExtensionCoreSchema = object3({
   "options title": optional2(LocalizableStringSchema),
   "options script file": optional2(null_("Not supported"))
 });
-var ExtensionSchema = merge([
-  ExtensionCoreSchema,
-  omit(ActionSchema, ["title"])
-]);
+var ExtensionSchema = merge([ExtensionCoreSchema, ActionSchema]);
 export {
   validateStaticConfig,
   standardizeKey,
