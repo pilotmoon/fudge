@@ -302,8 +302,7 @@ record as record2,
 regex,
 safeInteger as safeInteger2,
 string as string3,
-union as union2,
-unknown as unknown3
+union as union2
 } from "valibot";
 
 // src/icon.ts
@@ -659,7 +658,7 @@ var ExtensionCoreSchema = object3({
   module: optional2(union2([SaneStringSchema, literal(true)])),
   language: optional2(SaneStringSchema),
   action: optional2(ActionSchema),
-  actions: optional2(union2([array2(ActionSchema), object3({}, unknown3())])),
+  actions: optional2(array2(ActionSchema)),
   options: optional2(array2(OptionSchema)),
   "options title": optional2(LocalizableStringSchema),
   "options script file": optional2(null_("Not supported"))

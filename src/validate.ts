@@ -204,7 +204,7 @@ const ExtensionCoreSchema = object({
 
   // actions
   action: optional(ActionSchema),
-  actions: optional(union([array(ActionSchema), object({}, unknown())])),
+  actions: optional(array(ActionSchema)),
 
   // options
   options: optional(array(OptionSchema)),
