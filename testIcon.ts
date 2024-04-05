@@ -129,12 +129,10 @@ for (const { specifier, extraParams } of testData) {
   console.log("result", result);
 
   // compare results
-  delete (result as any).ok;
-  delete (result as any).specifier;
-  if (sy(result) === sy(remoteExpected)) {
+  if (sy(result.result) === sy(remoteExpected)) {
     console.log("✅");
   } else {
-    console.log("😑😑😑", sy(result), sy(remoteExpected));
+    console.log("😑😑😑", sy(result.result), sy(remoteExpected));
     fails.push(count);
   }
 }

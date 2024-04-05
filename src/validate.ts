@@ -1,11 +1,14 @@
 import {
+  Output,
   SchemaIssue,
   ValiError,
   array,
   boolean,
+  custom,
   intersect,
   literal,
   maxLength,
+  maxValue,
   merge,
   minLength,
   minValue,
@@ -20,17 +23,23 @@ import {
   regex,
   safeInteger,
   string,
-  transform,
   union,
   unknown,
 } from "valibot";
-import { IconParamsSchema } from "./icon";
+import {
+  IconComponentsSchema,
+  IconModifiersSchema,
+  defaultModifierValues,
+  standardizeIcon,
+} from "./icon";
+import { log } from "./log";
 
 /***********************************************************
   Schemas
 ***********************************************************/
 const SaneStringSchema = string([minLength(1), maxLength(500)]);
-const SaneStringSchemaAllowingEmpty = string([maxLength(500)]);
+const SaneStringAllowingEmptySchema = string([maxLength(500)]);
+const LongStringSchema = string([minLength(1), maxLength(10000)]);
 
 const StringTableSchema = intersect([
   record(SaneStringSchema, SaneStringSchema),
@@ -39,15 +48,15 @@ const StringTableSchema = intersect([
   }),
 ]);
 
-const LocalizableStringSchema = transform(
-  union([SaneStringSchema, StringTableSchema]),
-  (value) => (typeof value === "string" ? { en: value } : value),
-);
+const LocalizableStringSchema = union([SaneStringSchema, StringTableSchema]);
 
 const IdentifierSchema = string([
   minLength(1),
   maxLength(100),
-  regex(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/i, "Invalid identifier"),
+  regex(
+    /^[a-z0-9]+([._-]?[a-z0-9]+)*$/i,
+    "Invalid identifier (allowed: [a-zA-Z0-9]+, separated by [._-])",
+  ),
 ]);
 
 const VersionNumberSchema = number("Must be a number", [
@@ -59,206 +68,183 @@ const VersionStringSchema = string("Must be a string", [
   regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`),
 ]);
 
-const ModuleSchema = union([SaneStringSchema, literal(true)]);
-
-const EntitlementsSchema = array(SaneStringSchema);
+const IconSchema = union([LongStringSchema, null_(), literal(false)]);
 
 const AppSchema = object({
-  name: nonOptional(SaneStringSchema, "A name is required"),
-  link: nonOptional(string(), "A link is required"),
+  name: nonOptional(SaneStringSchema, "App name is required"),
+  link: nonOptional(SaneStringSchema, "App link is required"),
   "check installed": optional(boolean()),
   "bundle identifier": optional(SaneStringSchema),
   "bundle identifiers": optional(array(SaneStringSchema)),
 });
 
-const OptionsSchema = object({
-  identifier: nonOptional(SaneStringSchema),
-  type: nonOptional(SaneStringSchema),
-  label: optional(LocalizableStringSchema),
-  description: optional(LocalizableStringSchema),
-  values: optional(array(SaneStringSchemaAllowingEmpty)),
-  "value labels": optional(array(LocalizableStringSchema)),
-  "default value": optional(union([SaneStringSchemaAllowingEmpty, boolean()])),
-  icon: optional(string()),
-  hidden: optional(boolean()),
-  inset: optional(boolean()),
-});
-
-const KeyComboSchema = union([
-  number(),
-  SaneStringSchema,
+const OptionSchema = merge([
   object({
-    "key code": optional(number()),
-    "key char": optional(string([minLength(1), maxLength(1)])),
-    modifiers: nonOptional(number()),
+    identifier: nonOptional(IdentifierSchema, "Option identifier is required"),
+    type: nonOptional(SaneStringSchema, "Option type is required"),
+    label: optional(LocalizableStringSchema),
+    description: optional(LocalizableStringSchema),
+    values: optional(array(SaneStringAllowingEmptySchema)),
+    "value labels": optional(array(LocalizableStringSchema)),
+    "default value": optional(
+      union([SaneStringAllowingEmptySchema, boolean()]),
+    ),
+    hidden: optional(boolean()),
+    inset: optional(boolean()),
+    icon: optional(IconSchema),
   }),
+  IconModifiersSchema,
 ]);
 
-const ActionSchema = merge(
-  [
-    IconParamsSchema,
-    object({
-      // common fields
-      title: optional(LocalizableStringSchema),
-      icon: optional(union([string(), null_(), literal(false)])),
-      identifier: optional(IdentifierSchema),
-      app: optional(AppSchema),
-      apps: optional(array(AppSchema)),
-      "capture html": optional(boolean()),
-      "capture rtf": optional(boolean()),
-      "stay visible": optional(boolean()),
-      "restore pasteboard": optional(boolean()),
-      requirements: optional(array(SaneStringSchema)),
-      "required apps": optional(array(SaneStringSchema)),
-      "excluded apps": optional(array(SaneStringSchema)),
-      regex: optional(string()),
-      before: optional(SaneStringSchema),
-      after: optional(SaneStringSchema),
-      permissions: optional(array(SaneStringSchema)),
+const KeyCodeSchema = number([safeInteger(), minValue(0), maxValue(127)]);
 
-      // service actions
-      "service name": optional(string()),
-
-      // url actions
-      url: optional(SaneStringSchema),
-      "alternate url": optional(SaneStringSchema),
-      "clean query": optional(boolean()),
-
-      // key compo actions
-      "key combo": optional(KeyComboSchema),
-      "key combos": optional(array(KeyComboSchema)),
-
-      // applescript actions
-      applescript: optional(string()),
-      "applescript file": optional(string()),
-      "applescript call": optional(
-        object({
-          file: optional(SaneStringSchema),
-          handler: nonOptional(SaneStringSchema),
-          parameters: optional(array(SaneStringSchema)),
-        }),
+const KeyComboSchema = union([
+  KeyCodeSchema,
+  SaneStringSchema,
+  object(
+    {
+      "key code": optional(KeyCodeSchema),
+      "key char": optional(string([minLength(1), maxLength(1)])),
+      modifiers: nonOptional(
+        number([safeInteger(), minValue(0)]),
+        "'modifiers' is required",
       ),
+    },
+    [
+      custom((obj) => {
+        const hasKeyCode = obj["key code"] !== undefined;
+        const hasKeyChar = obj["key char"] !== undefined;
+        return (hasKeyCode || hasKeyChar) && !(hasKeyCode && hasKeyChar);
+      }, "One of 'key code' or 'key char' is required"),
+    ],
+  ),
+]);
 
-      // shell script actions
-      "shell script": optional(string()),
-      "shell script file": optional(SaneStringSchema),
-      interpreter: optional(SaneStringSchema),
-      stdin: optional(SaneStringSchema),
+const ActionCoreSchema = object({
+  title: optional(LocalizableStringSchema),
+  icon: optional(IconSchema),
+  identifier: optional(IdentifierSchema),
+});
 
-      // javascript actions
-      javascript: optional(string()),
-      "javascript file": optional(string()),
+const ActionFlagsSchema = object({
+  app: optional(AppSchema),
+  apps: optional(array(AppSchema)),
+  "capture html": optional(boolean()),
+  "capture rtf": optional(boolean()),
+  "stay visible": optional(boolean()),
+  "restore pasteboard": optional(boolean()),
+  requirements: optional(array(SaneStringSchema)),
+  "required apps": optional(array(SaneStringSchema)),
+  "excluded apps": optional(array(SaneStringSchema)),
+  regex: optional(LongStringSchema),
+  before: optional(SaneStringSchema),
+  after: optional(SaneStringSchema),
+  permissions: optional(array(SaneStringSchema)),
+});
 
-      // shortcut actions
-      "shortcut name": optional(string()),
-    }),
-  ],
-  //unknown(),
-);
+const ServiceActionSchema = object({
+  "service name": optional(SaneStringSchema),
+});
 
-const ExtensionSchema = merge(
-  [
+const ShortcutActionSchema = object({
+  "shortcut name": optional(SaneStringSchema),
+});
+
+const UrlActionSchema = object({
+  url: optional(SaneStringSchema),
+  "alternate url": optional(SaneStringSchema),
+  "clean query": optional(boolean()),
+});
+
+const KeyComboActionSchema = object({
+  "key combo": optional(KeyComboSchema),
+  "key combos": optional(array(KeyComboSchema)),
+});
+
+const AppleScriptActionSchema = object({
+  applescript: optional(LongStringSchema),
+  "applescript file": optional(SaneStringSchema),
+  "applescript call": optional(
     object({
-      name: nonOptional(LocalizableStringSchema, "A name is required"),
-      "popclip version": optional(VersionNumberSchema),
-      "macos version": optional(VersionStringSchema),
-      entitlements: optional(EntitlementsSchema),
-
-      module: optional(ModuleSchema),
-      language: optional(SaneStringSchema),
-
-      // actions
-      action: optional(ActionSchema),
-      actions: optional(array(ActionSchema)),
-
-      // options
-      options: optional(array(OptionsSchema)),
-      "options title": optional(LocalizableStringSchema),
-      "options script file": optional(SaneStringSchema),
-
-      // meta
-      description: optional(LocalizableStringSchema),
+      file: optional(SaneStringSchema),
+      handler: nonOptional(SaneStringSchema, "Handler name is required"),
+      parameters: optional(array(SaneStringSchema)),
     }),
-    omit(ActionSchema, ["title"]),
-  ],
-  //unknown(),
-);
+  ),
+});
 
-// const ActionTypeSchema = picklist([
-//   "service",
-//   "url",
-//   "key combo",
-//   "applescript",
-//   "shell script",
-//   "javascript",
-//   "shortcut",
-//   "none",
-// ] as const);
+const ShellScriptActionSchema = object({
+  "shell script": optional(LongStringSchema),
+  "shell script file": optional(SaneStringSchema),
+  interpreter: optional(SaneStringSchema),
+  stdin: optional(SaneStringSchema),
+});
 
-// function inferIcon(extension: Output<typeof ExtensionSchema>) {
-//   if (extension.icon) {
-//     return extension.icon;
-//   } else if (extension.actions) {
-//     for (const action of extension.actions) {
-//       if (action.icon) {
-//         return action.icon;
-//       }
+const JavaScriptActionSchema = object({
+  javascript: optional(LongStringSchema),
+  "javascript file": optional(SaneStringSchema),
+});
+
+const ActionSchema = merge([
+  ActionCoreSchema,
+  ActionFlagsSchema,
+  IconModifiersSchema,
+  ServiceActionSchema,
+  ShortcutActionSchema,
+  UrlActionSchema,
+  KeyComboActionSchema,
+  AppleScriptActionSchema,
+  ShellScriptActionSchema,
+  JavaScriptActionSchema,
+]);
+
+const ExtensionCoreSchema = object({
+  name: nonOptional(LocalizableStringSchema, "A name is required"),
+  icon: optional(IconSchema),
+  identifier: optional(IdentifierSchema),
+  "popclip version": optional(VersionNumberSchema),
+  "macos version": optional(VersionStringSchema),
+  entitlements: optional(array(SaneStringSchema)),
+
+  // module
+  module: optional(union([SaneStringSchema, literal(true)])),
+  language: optional(SaneStringSchema),
+
+  // actions
+  action: optional(ActionSchema),
+  actions: optional(union([array(ActionSchema), object({}, unknown())])),
+
+  // options
+  options: optional(array(OptionSchema)),
+  "options title": optional(LocalizableStringSchema),
+  "options script file": optional(null_("Not supported")),
+});
+
+const ExtensionSchema = merge([
+  ExtensionCoreSchema,
+  omit(ActionSchema, ["title"]),
+]);
+
+// function preprocessIcon(action: Output<typeof ActionSchema>) {
+//   if (action.icon === false) {
+//     action.icon = null;
+//   }
+//   if (typeof action.icon === "string") {
+//     log("preprocessing", action.icon);
+//     const iconData = standardizeIcon(action.icon, action);
+//     if (iconData.ok) {
+//       action.icon = iconData.result;
 //     }
 //   }
-//   return undefined;
-// }
-
-// function classifyAction(
-//   action: Output<typeof ActionSchema>,
-// ): Output<typeof ActionTypeSchema> {
-//   if (action["service name"]) {
-//     return "service";
+//   // finally remove all icon params fields from action
+//   for (const key of defaultModifierValues.keys()) {
+//     delete (action as any)[key];
 //   }
-//   if (action.url) {
-//     return "url";
-//   }
-//   if (action["key combo"] || action["key combos"]) {
-//     return "key combo";
-//   }
-//   if (
-//     action.applescript ||
-//     action["applescript file"] ||
-//     action["applescript call"]
-//   ) {
-//     return "applescript";
-//   }
-//   if (action["shell script"] || action["shell script file"]) {
-//     return "shell script";
-//   }
-//   if (action.javascript || action["javascript file"]) {
-//     return "javascript";
-//   }
-//   if (action["shortcut name"]) {
-//     return "shortcut";
-//   }
-//   return "none";
-// }
-
-// function inferActionTypes(extension: Output<typeof ExtensionSchema>) {
-//   const types = new Set<string>();
-//   if (extension.module) {
-//     types.add("javascript");
-//   } else if (extension.actions) {
-//     for (const action of extension.actions) {
-//       types.add(classifyAction(action));
-//     }
-//   } else {
-//     types.add(classifyAction(extension));
-//   }
-//   return parse(array(ActionTypeSchema), Array.from(types));
 // }
 
 export function validateStaticConfig(config: unknown) {
   try {
-    const result = parse(ExtensionSchema, config);
-    // result.icon = inferIcon(result);
-    // result["action types"] = inferActionTypes(result);
-    return result;
+    return parse(ExtensionSchema, config);
   } catch (error) {
     if (error instanceof ValiError) {
       throw new Error(formatValiError(error));

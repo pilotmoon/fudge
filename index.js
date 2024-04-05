@@ -284,9 +284,11 @@ import {
 ValiError as ValiError2,
 array as array2,
 boolean as boolean2,
+custom,
 intersect,
 literal,
 maxLength,
+maxValue,
 merge,
 minLength,
 minValue,
@@ -301,8 +303,8 @@ record as record2,
 regex,
 safeInteger,
 string as string3,
-transform as transform2,
-union as union2
+union as union2,
+unknown as unknown3
 } from "valibot";
 
 // src/icon.ts
@@ -336,27 +338,25 @@ var renderModifier = function(key, value) {
     return `${key}=${value}`;
   return "";
 };
-var descriptorStringFromComponents = function({
-  prefix,
-  payload,
-  modifiers
-}) {
+function descriptorStringFromComponents(components) {
+  const { prefix, payload, modifiers } = components;
   const modifierString = Object.entries(modifiers).map(([key, value]) => renderModifier(key, value)).filter((x) => x.length > 0).join(" ");
   return `${modifierString} ${prefix}:${payload}`.trim();
-};
+}
 function standardizeIcon(specifier, extraParams) {
+  log("standardizeIcon", specifier, extraParams);
   const parsed = parseDescriptorString(specifier);
   if (!parsed.ok) {
     return parsed;
   }
   for (const shape of SHAPE_NAMES) {
-    if (parsed.modifiers?.[shape]) {
-      parsed.modifiers.shape = shape;
-      delete parsed.modifiers[shape];
+    if (parsed.result.modifiers?.[shape]) {
+      parsed.result.modifiers.shape = shape;
+      delete parsed.result.modifiers[shape];
     }
   }
-  const merged = v.parse(IconParamsSchema, {
-    ...parsed.modifiers,
+  const merged = v.parse(IconModifiersSchema, {
+    ...parsed.result.modifiers,
     ...standardizeConfig(extraParams)
   });
   for (const [key, value] of Object.entries(merged)) {
@@ -364,11 +364,8 @@ function standardizeIcon(specifier, extraParams) {
       delete merged[key];
     }
   }
-  parsed.modifiers = merged;
-  return {
-    specifier: descriptorStringFromComponents(parsed),
-    ...parsed
-  };
+  parsed.result.modifiers = merged;
+  return parsed;
 }
 var parseDescriptorString = function(string3) {
   string3 = string3.trim();
@@ -391,9 +388,11 @@ var parseDescriptorString = function(string3) {
     log("single emoji detected");
     return {
       ok: true,
-      prefix: "text",
-      payload: string3,
-      modifiers: {}
+      result: {
+        prefix: "text",
+        payload: string3,
+        modifiers: {}
+      }
     };
   }
   const components = string3.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/i);
@@ -417,7 +416,14 @@ var parseDescriptorString = function(string3) {
   }
   const prefix = match[1];
   const payload = match[2];
-  return { ok: true, prefix, payload, modifiers };
+  return {
+    ok: true,
+    result: {
+      prefix,
+      payload,
+      modifiers
+    }
+  };
 };
 var parseModifierString = function(modifiers) {
   const result = {};
@@ -432,7 +438,6 @@ var parseModifierString = function(modifiers) {
   }
   return result;
 };
-log("ereg", JSON.stringify(emojiRegex, null, 2));
 var r = new RegExp("^(" + emojiRegex().source + ")$");
 var NumberAsString = v.union([
   v.number(),
@@ -443,27 +448,45 @@ var BooleanAsString = v.union([
   v.transform(v.string(), (x) => x === "" || x === "1")
 ]);
 var SHAPE_NAMES = ["search", "circle", "square"];
-var IconParamsSchema = v.object({
-  "preserve color": v.optional(BooleanAsString, undefined),
-  "preserve aspect": v.optional(BooleanAsString, undefined),
-  shape: v.optional(v.picklist(SHAPE_NAMES), undefined),
-  filled: v.optional(BooleanAsString, false),
-  strike: v.optional(BooleanAsString, false),
-  monospaced: v.optional(BooleanAsString, false),
-  "flip x": v.optional(BooleanAsString, false),
-  "flip y": v.optional(BooleanAsString, false),
-  "move x": v.optional(NumberAsString, 0),
-  "move y": v.optional(NumberAsString, 0),
-  scale: v.optional(NumberAsString, 100),
-  rotate: v.optional(NumberAsString, 0)
+var ICON_PARAM_DEFAULTS = {
+  "preserve color": undefined,
+  "preserve aspect": undefined,
+  shape: undefined,
+  filled: false,
+  strike: false,
+  monospaced: false,
+  "flip x": false,
+  "flip y": false,
+  "move x": 0,
+  "move y": 0,
+  scale: 100,
+  rotate: 0
+};
+var IconModifiersSchema = v.object({
+  "preserve color": v.optional(BooleanAsString),
+  "preserve aspect": v.optional(BooleanAsString),
+  shape: v.optional(v.picklist(SHAPE_NAMES)),
+  filled: v.optional(BooleanAsString),
+  strike: v.optional(BooleanAsString),
+  monospaced: v.optional(BooleanAsString),
+  "flip x": v.optional(BooleanAsString),
+  "flip y": v.optional(BooleanAsString),
+  "move x": v.optional(NumberAsString),
+  "move y": v.optional(NumberAsString),
+  scale: v.optional(NumberAsString),
+  rotate: v.optional(NumberAsString)
 });
-var defaultModifierValues = new Map(Object.entries(v.getDefaults(IconParamsSchema)));
+var defaultModifierValues = new Map(Object.entries(ICON_PARAM_DEFAULTS));
+var IconComponentsSchema = v.object({
+  prefix: v.string(),
+  payload: v.string(),
+  modifiers: v.object({}, v.unknown())
+});
 
 // src/validate.ts
 function validateStaticConfig(config2) {
   try {
-    const result = parse4(ExtensionSchema, config2);
-    return result;
+    return parse4(ExtensionSchema, config2);
   } catch (error) {
     if (error instanceof ValiError2) {
       throw new Error(formatValiError(error));
@@ -493,18 +516,19 @@ var formatValiIssue = function(issue) {
   return { dotPath, message };
 };
 var SaneStringSchema = string3([minLength(1), maxLength(500)]);
-var SaneStringSchemaAllowingEmpty = string3([maxLength(500)]);
+var SaneStringAllowingEmptySchema = string3([maxLength(500)]);
+var LongStringSchema = string3([minLength(1), maxLength(1e4)]);
 var StringTableSchema = intersect([
   record2(SaneStringSchema, SaneStringSchema),
   object3({
     en: nonOptional(SaneStringSchema, "An 'en' string is required")
   })
 ]);
-var LocalizableStringSchema = transform2(union2([SaneStringSchema, StringTableSchema]), (value) => typeof value === "string" ? { en: value } : value);
+var LocalizableStringSchema = union2([SaneStringSchema, StringTableSchema]);
 var IdentifierSchema = string3([
   minLength(1),
   maxLength(100),
-  regex(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/i, "Invalid identifier")
+  regex(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/i, "Invalid identifier (allowed: [a-zA-Z0-9]+, separated by [._-])")
 ]);
 var VersionNumberSchema = number2("Must be a number", [
   safeInteger("Must be an integer"),
@@ -513,92 +537,128 @@ var VersionNumberSchema = number2("Must be a number", [
 var VersionStringSchema = string3("Must be a string", [
   regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`)
 ]);
-var ModuleSchema = union2([SaneStringSchema, literal(true)]);
-var EntitlementsSchema = array2(SaneStringSchema);
+var IconSchema = union2([LongStringSchema, null_(), literal(false)]);
 var AppSchema = object3({
-  name: nonOptional(SaneStringSchema, "A name is required"),
-  link: nonOptional(string3(), "A link is required"),
+  name: nonOptional(SaneStringSchema, "App name is required"),
+  link: nonOptional(SaneStringSchema, "App link is required"),
   "check installed": optional2(boolean2()),
   "bundle identifier": optional2(SaneStringSchema),
   "bundle identifiers": optional2(array2(SaneStringSchema))
 });
-var OptionsSchema = object3({
-  identifier: nonOptional(SaneStringSchema),
-  type: nonOptional(SaneStringSchema),
-  label: optional2(LocalizableStringSchema),
-  description: optional2(LocalizableStringSchema),
-  values: optional2(array2(SaneStringSchemaAllowingEmpty)),
-  "value labels": optional2(array2(LocalizableStringSchema)),
-  "default value": optional2(union2([SaneStringSchemaAllowingEmpty, boolean2()])),
-  icon: optional2(string3()),
-  hidden: optional2(boolean2()),
-  inset: optional2(boolean2())
-});
+var OptionSchema = merge([
+  object3({
+    identifier: nonOptional(IdentifierSchema, "Option identifier is required"),
+    type: nonOptional(SaneStringSchema, "Option type is required"),
+    label: optional2(LocalizableStringSchema),
+    description: optional2(LocalizableStringSchema),
+    values: optional2(array2(SaneStringAllowingEmptySchema)),
+    "value labels": optional2(array2(LocalizableStringSchema)),
+    "default value": optional2(union2([SaneStringAllowingEmptySchema, boolean2()])),
+    hidden: optional2(boolean2()),
+    inset: optional2(boolean2()),
+    icon: optional2(IconSchema)
+  }),
+  IconModifiersSchema
+]);
+var KeyCodeSchema = number2([safeInteger(), minValue(0), maxValue(127)]);
 var KeyComboSchema = union2([
-  number2(),
+  KeyCodeSchema,
   SaneStringSchema,
   object3({
-    "key code": optional2(number2()),
+    "key code": optional2(KeyCodeSchema),
     "key char": optional2(string3([minLength(1), maxLength(1)])),
-    modifiers: nonOptional(number2())
-  })
+    modifiers: nonOptional(number2([safeInteger(), minValue(0)]), "'modifiers' is required")
+  }, [
+    custom((obj) => {
+      const hasKeyCode = obj["key code"] !== undefined;
+      const hasKeyChar = obj["key char"] !== undefined;
+      return (hasKeyCode || hasKeyChar) && !(hasKeyCode && hasKeyChar);
+    }, "One of 'key code' or 'key char' is required")
+  ])
 ]);
+var ActionCoreSchema = object3({
+  title: optional2(LocalizableStringSchema),
+  icon: optional2(IconSchema),
+  identifier: optional2(IdentifierSchema)
+});
+var ActionFlagsSchema = object3({
+  app: optional2(AppSchema),
+  apps: optional2(array2(AppSchema)),
+  "capture html": optional2(boolean2()),
+  "capture rtf": optional2(boolean2()),
+  "stay visible": optional2(boolean2()),
+  "restore pasteboard": optional2(boolean2()),
+  requirements: optional2(array2(SaneStringSchema)),
+  "required apps": optional2(array2(SaneStringSchema)),
+  "excluded apps": optional2(array2(SaneStringSchema)),
+  regex: optional2(LongStringSchema),
+  before: optional2(SaneStringSchema),
+  after: optional2(SaneStringSchema),
+  permissions: optional2(array2(SaneStringSchema))
+});
+var ServiceActionSchema = object3({
+  "service name": optional2(SaneStringSchema)
+});
+var ShortcutActionSchema = object3({
+  "shortcut name": optional2(SaneStringSchema)
+});
+var UrlActionSchema = object3({
+  url: optional2(SaneStringSchema),
+  "alternate url": optional2(SaneStringSchema),
+  "clean query": optional2(boolean2())
+});
+var KeyComboActionSchema = object3({
+  "key combo": optional2(KeyComboSchema),
+  "key combos": optional2(array2(KeyComboSchema))
+});
+var AppleScriptActionSchema = object3({
+  applescript: optional2(LongStringSchema),
+  "applescript file": optional2(SaneStringSchema),
+  "applescript call": optional2(object3({
+    file: optional2(SaneStringSchema),
+    handler: nonOptional(SaneStringSchema, "Handler name is required"),
+    parameters: optional2(array2(SaneStringSchema))
+  }))
+});
+var ShellScriptActionSchema = object3({
+  "shell script": optional2(LongStringSchema),
+  "shell script file": optional2(SaneStringSchema),
+  interpreter: optional2(SaneStringSchema),
+  stdin: optional2(SaneStringSchema)
+});
+var JavaScriptActionSchema = object3({
+  javascript: optional2(LongStringSchema),
+  "javascript file": optional2(SaneStringSchema)
+});
 var ActionSchema = merge([
-  IconParamsSchema,
-  object3({
-    title: optional2(LocalizableStringSchema),
-    icon: optional2(union2([string3(), null_(), literal(false)])),
-    identifier: optional2(IdentifierSchema),
-    app: optional2(AppSchema),
-    apps: optional2(array2(AppSchema)),
-    "capture html": optional2(boolean2()),
-    "capture rtf": optional2(boolean2()),
-    "stay visible": optional2(boolean2()),
-    "restore pasteboard": optional2(boolean2()),
-    requirements: optional2(array2(SaneStringSchema)),
-    "required apps": optional2(array2(SaneStringSchema)),
-    "excluded apps": optional2(array2(SaneStringSchema)),
-    regex: optional2(string3()),
-    before: optional2(SaneStringSchema),
-    after: optional2(SaneStringSchema),
-    permissions: optional2(array2(SaneStringSchema)),
-    "service name": optional2(string3()),
-    url: optional2(SaneStringSchema),
-    "alternate url": optional2(SaneStringSchema),
-    "clean query": optional2(boolean2()),
-    "key combo": optional2(KeyComboSchema),
-    "key combos": optional2(array2(KeyComboSchema)),
-    applescript: optional2(string3()),
-    "applescript file": optional2(string3()),
-    "applescript call": optional2(object3({
-      file: optional2(SaneStringSchema),
-      handler: nonOptional(SaneStringSchema),
-      parameters: optional2(array2(SaneStringSchema))
-    })),
-    "shell script": optional2(string3()),
-    "shell script file": optional2(SaneStringSchema),
-    interpreter: optional2(SaneStringSchema),
-    stdin: optional2(SaneStringSchema),
-    javascript: optional2(string3()),
-    "javascript file": optional2(string3()),
-    "shortcut name": optional2(string3())
-  })
+  ActionCoreSchema,
+  ActionFlagsSchema,
+  IconModifiersSchema,
+  ServiceActionSchema,
+  ShortcutActionSchema,
+  UrlActionSchema,
+  KeyComboActionSchema,
+  AppleScriptActionSchema,
+  ShellScriptActionSchema,
+  JavaScriptActionSchema
 ]);
+var ExtensionCoreSchema = object3({
+  name: nonOptional(LocalizableStringSchema, "A name is required"),
+  icon: optional2(IconSchema),
+  identifier: optional2(IdentifierSchema),
+  "popclip version": optional2(VersionNumberSchema),
+  "macos version": optional2(VersionStringSchema),
+  entitlements: optional2(array2(SaneStringSchema)),
+  module: optional2(union2([SaneStringSchema, literal(true)])),
+  language: optional2(SaneStringSchema),
+  action: optional2(ActionSchema),
+  actions: optional2(union2([array2(ActionSchema), object3({}, unknown3())])),
+  options: optional2(array2(OptionSchema)),
+  "options title": optional2(LocalizableStringSchema),
+  "options script file": optional2(null_("Not supported"))
+});
 var ExtensionSchema = merge([
-  object3({
-    name: nonOptional(LocalizableStringSchema, "A name is required"),
-    "popclip version": optional2(VersionNumberSchema),
-    "macos version": optional2(VersionStringSchema),
-    entitlements: optional2(EntitlementsSchema),
-    module: optional2(ModuleSchema),
-    language: optional2(SaneStringSchema),
-    action: optional2(ActionSchema),
-    actions: optional2(array2(ActionSchema)),
-    options: optional2(array2(OptionsSchema)),
-    "options title": optional2(LocalizableStringSchema),
-    "options script file": optional2(SaneStringSchema),
-    description: optional2(LocalizableStringSchema)
-  }),
+  ExtensionCoreSchema,
   omit(ActionSchema, ["title"])
 ]);
 export {
@@ -608,5 +668,6 @@ export {
   standardizeConfig,
   loadStaticConfig,
   isSingleEmoji,
+  descriptorStringFromComponents,
   configFromText
 };
