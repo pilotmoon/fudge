@@ -80,6 +80,12 @@ const testData = [
   {
     specifier: "circle scale=100 A",
   },
+  {
+    specifier: "circle scale=b A",
+  },
+  {
+    specifier: "circle flip-x=1 A",
+  },
 ];
 
 async function parseRemotely(specifier: string, extraParams: unknown) {

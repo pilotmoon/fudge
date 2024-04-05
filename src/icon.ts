@@ -4,6 +4,7 @@ import * as v from "valibot";
 import { Config } from "./config.js";
 import { log } from "./log.js";
 import { standardizeConfig, standardizeKey } from "./std.js";
+import { formatValiIssues } from "./valibotIssues.js";
 
 // Emoji detector utilty
 const r = new RegExp("^(" + emojiRegex().source + ")$");
@@ -11,12 +12,12 @@ export function isSingleEmoji(string: string) {
   return r.test(string);
 }
 
-const NumberAsString = v.union([
-  v.number(),
-  v.transform(v.string(), (x) => Number(x)),
+const IntegerFromString = v.union([
+  v.number([v.safeInteger()]),
+  v.transform(v.string(), (x) => Number(x), [v.safeInteger()]),
 ]);
 
-const BooleanAsString = v.union([
+const BooleanFromString = v.union([
   v.boolean(),
   v.transform(v.string(), (x) => x === "" || x === "1"),
 ]);
@@ -40,18 +41,18 @@ const ICON_PARAM_DEFAULTS = {
 };
 
 export const IconModifiersSchema = v.object({
-  "preserve color": v.optional(BooleanAsString),
-  "preserve aspect": v.optional(BooleanAsString),
+  "preserve color": v.optional(BooleanFromString),
+  "preserve aspect": v.optional(BooleanFromString),
   shape: v.optional(v.picklist(SHAPE_NAMES)),
-  filled: v.optional(BooleanAsString),
-  strike: v.optional(BooleanAsString),
-  monospaced: v.optional(BooleanAsString),
-  "flip x": v.optional(BooleanAsString),
-  "flip y": v.optional(BooleanAsString),
-  "move x": v.optional(NumberAsString),
-  "move y": v.optional(NumberAsString),
-  scale: v.optional(NumberAsString),
-  rotate: v.optional(NumberAsString),
+  filled: v.optional(BooleanFromString),
+  strike: v.optional(BooleanFromString),
+  monospaced: v.optional(BooleanFromString),
+  "flip x": v.optional(BooleanFromString),
+  "flip y": v.optional(BooleanFromString),
+  "move x": v.optional(IntegerFromString),
+  "move y": v.optional(IntegerFromString),
+  scale: v.optional(IntegerFromString),
+  rotate: v.optional(IntegerFromString),
 });
 
 // default modifier values
@@ -101,17 +102,26 @@ export function standardizeIcon(specifier: string, extraParams: unknown) {
     }
   }
 
-  // filter modifiers that are the same as the default
-  const merged: Config = v.parse(IconModifiersSchema, {
+  // validate modifiers
+  const validated = v.safeParse(IconModifiersSchema, {
     ...parsed.result.modifiers,
     ...standardizeConfig(extraParams),
   });
-  for (const [key, value] of Object.entries(merged)) {
+  if (!validated.success) {
+    return {
+      ok: false as const,
+      error: `invalid modifiers: ${formatValiIssues(validated.issues)}`,
+    };
+  }
+
+  // remove default values
+  for (const [key, value] of Object.entries(validated.output)) {
     if (value === defaultModifierValues.get(key)) {
-      delete merged[key];
+      delete (validated.output as any)[key];
     }
   }
-  parsed.result.modifiers = merged;
+
+  parsed.result.modifiers = validated.output;
   return parsed;
 }
 

@@ -297,10 +297,10 @@ null_,
 number as number2,
 object as object3,
 optional as optional2,
-parse as parse4,
+parse as parse3,
 record as record2,
 regex,
-safeInteger,
+safeInteger as safeInteger2,
 string as string3,
 union as union2,
 unknown as unknown3
@@ -319,6 +319,28 @@ function log(...args) {
     console.log(...args);
   }
 }
+
+// src/valibotIssues.ts
+function formatValiIssues(issues) {
+  const messages = [];
+  for (const issue of issues) {
+    const fmt = formatValiIssue(issue);
+    if (fmt) {
+      messages.push(`${fmt.dotPath}: ${fmt.message}`);
+    }
+  }
+  return messages.join("\n");
+}
+var formatValiIssue = function(issue) {
+  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
+  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
+    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
+    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
+    return fmt;
+  }
+  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
+  return { dotPath, message };
+};
 
 // src/icon.ts
 function isSingleEmoji(string3) {
@@ -354,16 +376,22 @@ function standardizeIcon(specifier, extraParams) {
       delete parsed.result.modifiers[shape];
     }
   }
-  const merged = v.parse(IconModifiersSchema, {
+  const validated = v.safeParse(IconModifiersSchema, {
     ...parsed.result.modifiers,
     ...standardizeConfig(extraParams)
   });
-  for (const [key, value] of Object.entries(merged)) {
+  if (!validated.success) {
+    return {
+      ok: false,
+      error: `invalid modifiers: ${formatValiIssues(validated.issues)}`
+    };
+  }
+  for (const [key, value] of Object.entries(validated.output)) {
     if (value === defaultModifierValues.get(key)) {
-      delete merged[key];
+      delete validated.output[key];
     }
   }
-  parsed.result.modifiers = merged;
+  parsed.result.modifiers = validated.output;
   return parsed;
 }
 var parseDescriptorString = function(string3) {
@@ -438,11 +466,11 @@ var parseModifierString = function(modifiers) {
   return result;
 };
 var r = new RegExp("^(" + emojiRegex().source + ")$");
-var NumberAsString = v.union([
-  v.number(),
-  v.transform(v.string(), (x) => Number(x))
+var IntegerFromString = v.union([
+  v.number([v.safeInteger()]),
+  v.transform(v.string(), (x) => Number(x), [v.safeInteger()])
 ]);
-var BooleanAsString = v.union([
+var BooleanFromString = v.union([
   v.boolean(),
   v.transform(v.string(), (x) => x === "" || x === "1")
 ]);
@@ -462,18 +490,18 @@ var ICON_PARAM_DEFAULTS = {
   rotate: 0
 };
 var IconModifiersSchema = v.object({
-  "preserve color": v.optional(BooleanAsString),
-  "preserve aspect": v.optional(BooleanAsString),
+  "preserve color": v.optional(BooleanFromString),
+  "preserve aspect": v.optional(BooleanFromString),
   shape: v.optional(v.picklist(SHAPE_NAMES)),
-  filled: v.optional(BooleanAsString),
-  strike: v.optional(BooleanAsString),
-  monospaced: v.optional(BooleanAsString),
-  "flip x": v.optional(BooleanAsString),
-  "flip y": v.optional(BooleanAsString),
-  "move x": v.optional(NumberAsString),
-  "move y": v.optional(NumberAsString),
-  scale: v.optional(NumberAsString),
-  rotate: v.optional(NumberAsString)
+  filled: v.optional(BooleanFromString),
+  strike: v.optional(BooleanFromString),
+  monospaced: v.optional(BooleanFromString),
+  "flip x": v.optional(BooleanFromString),
+  "flip y": v.optional(BooleanFromString),
+  "move x": v.optional(IntegerFromString),
+  "move y": v.optional(IntegerFromString),
+  scale: v.optional(IntegerFromString),
+  rotate: v.optional(IntegerFromString)
 });
 var defaultModifierValues = new Map(Object.entries(ICON_PARAM_DEFAULTS));
 var IconComponentsSchema = v.object({
@@ -485,35 +513,15 @@ var IconComponentsSchema = v.object({
 // src/validate.ts
 function validateStaticConfig(config2) {
   try {
-    return parse4(ExtensionSchema, config2);
+    return parse3(ExtensionSchema, config2);
   } catch (error) {
     if (error instanceof ValiError2) {
-      throw new Error(formatValiError(error));
+      throw new Error(formatValiIssues(error.issues));
     }
     const msg = error instanceof Error ? error.message : "Unknown error";
     throw new Error(`Invalid base config: ${msg}`);
   }
 }
-var formatValiError = function(error) {
-  const messages = [];
-  for (const issue of error.issues) {
-    const fmt = formatValiIssue(issue);
-    if (fmt) {
-      messages.push(`${fmt.dotPath}: ${fmt.message}`);
-    }
-  }
-  return messages.join("\n");
-};
-var formatValiIssue = function(issue) {
-  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
-  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
-    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
-    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
-    return fmt;
-  }
-  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
-  return { dotPath, message };
-};
 var SaneStringSchema = string3([minLength(1), maxLength(500)]);
 var SaneStringAllowingEmptySchema = string3([maxLength(500)]);
 var LongStringSchema = string3([minLength(1), maxLength(1e4)]);
@@ -530,7 +538,7 @@ var IdentifierSchema = string3([
   regex(/^[a-z0-9]+([._-]?[a-z0-9]+)*$/i, "Invalid identifier (allowed: [a-zA-Z0-9]+, separated by [._-])")
 ]);
 var VersionNumberSchema = number2("Must be a number", [
-  safeInteger("Must be an integer"),
+  safeInteger2("Must be an integer"),
   minValue(1)
 ]);
 var VersionStringSchema = string3("Must be a string", [
@@ -559,14 +567,14 @@ var OptionSchema = merge([
   }),
   IconModifiersSchema
 ]);
-var KeyCodeSchema = number2([safeInteger(), minValue(0), maxValue(127)]);
+var KeyCodeSchema = number2([safeInteger2(), minValue(0), maxValue(127)]);
 var KeyComboSchema = union2([
   KeyCodeSchema,
   SaneStringSchema,
   object3({
     "key code": optional2(KeyCodeSchema),
     "key char": optional2(string3([minLength(1), maxLength(1)])),
-    modifiers: nonOptional(number2([safeInteger(), minValue(0)]), "'modifiers' is required")
+    modifiers: nonOptional(number2([safeInteger2(), minValue(0)]), "'modifiers' is required")
   }, [
     custom((obj) => {
       const hasKeyCode = obj["key code"] !== undefined;

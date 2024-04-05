@@ -1,5 +1,4 @@
 import {
-  SchemaIssue,
   ValiError,
   array,
   boolean,
@@ -25,6 +24,7 @@ import {
   unknown,
 } from "valibot";
 import { IconModifiersSchema } from "./icon";
+import { formatValiIssues } from "./valibotIssues";
 
 /***********************************************************
   Schemas
@@ -219,36 +219,9 @@ export function validateStaticConfig(config: unknown) {
     return parse(ExtensionSchema, config);
   } catch (error) {
     if (error instanceof ValiError) {
-      throw new Error(formatValiError(error));
+      throw new Error(formatValiIssues(error.issues));
     }
     const msg = error instanceof Error ? error.message : "Unknown error";
     throw new Error(`Invalid base config: ${msg}`);
   }
-}
-
-function formatValiError(error: ValiError) {
-  const messages = [];
-  for (const issue of error.issues) {
-    const fmt = formatValiIssue(issue);
-    if (fmt) {
-      messages.push(`${fmt.dotPath}: ${fmt.message}`);
-    }
-  }
-  return messages.join("\n"); // + `--- \n${JSON.stringify(error, undefined, 2)}`;
-}
-
-function formatValiIssue(issue: SchemaIssue): {
-  dotPath: string;
-  message: string;
-} {
-  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
-  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
-    const fmt = formatValiIssue(
-      issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0],
-    );
-    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
-    return fmt;
-  }
-  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
-  return { dotPath, message };
 }
