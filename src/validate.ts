@@ -1,5 +1,4 @@
 import {
-  Output,
   SchemaIssue,
   ValiError,
   array,
@@ -26,13 +25,7 @@ import {
   union,
   unknown,
 } from "valibot";
-import {
-  IconComponentsSchema,
-  IconModifiersSchema,
-  defaultModifierValues,
-  standardizeIcon,
-} from "./icon";
-import { log } from "./log";
+import { IconModifiersSchema } from "./icon";
 
 /***********************************************************
   Schemas
@@ -224,23 +217,6 @@ const ExtensionSchema = merge([
   ExtensionCoreSchema,
   omit(ActionSchema, ["title"]),
 ]);
-
-// function preprocessIcon(action: Output<typeof ActionSchema>) {
-//   if (action.icon === false) {
-//     action.icon = null;
-//   }
-//   if (typeof action.icon === "string") {
-//     log("preprocessing", action.icon);
-//     const iconData = standardizeIcon(action.icon, action);
-//     if (iconData.ok) {
-//       action.icon = iconData.result;
-//     }
-//   }
-//   // finally remove all icon params fields from action
-//   for (const key of defaultModifierValues.keys()) {
-//     delete (action as any)[key];
-//   }
-// }
 
 export function validateStaticConfig(config: unknown) {
   try {
