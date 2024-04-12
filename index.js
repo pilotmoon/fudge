@@ -672,5 +672,6 @@ export {
   loadStaticConfig,
   isSingleEmoji,
   descriptorStringFromComponents,
-  configFromText
+  configFromText,
+  IdentifierSchema
 };
