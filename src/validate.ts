@@ -46,7 +46,7 @@ export const IdentifierSchema = string([
   minLength(1),
   maxLength(100),
   regex(
-    /^[a-z0-9]+([._-]?[a-z0-9]+)*$/i,
+    /^[a-z0-9]+([._-][a-z0-9]+)*$/i,
     "Invalid identifier (allowed: [a-zA-Z0-9]+, separated by [._-])",
   ),
 ]);
