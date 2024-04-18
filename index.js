@@ -692,22 +692,13 @@ var extractLocalizedString = function(ls) {
   }
 };
 function extractSummary(config2) {
-  const actions = [];
-  if (config2.actions) {
-    actions.push(...config2.actions);
-  } else if (config2.action) {
-    actions.push(config2.action);
-  } else {
-    actions.push(config2);
-  }
+  const actions = config2.actions ? config2.actions : config2.action ? [config2.action] : [];
   const icon3 = (() => {
     let parsedIcon;
-    if (config2.icon) {
-      parsedIcon = standardizeIcon(config2.icon, config2);
-    }
-    for (const action of actions) {
-      if (action.icon) {
-        parsedIcon = standardizeIcon(action.icon, action);
+    for (const obj of [config2, ...actions]) {
+      if (obj.icon) {
+        parsedIcon = standardizeIcon(obj.icon, obj);
+        break;
       }
     }
     if (parsedIcon?.ok) {
@@ -719,19 +710,17 @@ function extractSummary(config2) {
   if (config2.module) {
     actionTypesSet.add("javascript");
   } else {
-    for (const action of actions) {
-      let found = false;
+    for (const action of [...actions, config2]) {
       for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
         if (keys.some((key) => action.hasOwnProperty(key))) {
           actionTypesSet.add(type);
-          found = true;
           break;
         }
       }
-      if (!found) {
-        actionTypesSet.add("none");
-      }
     }
+  }
+  if (actionTypesSet.size === 0 && actions.length > 0) {
+    actionTypesSet.add("none");
   }
   const actionTypes = Array.from(actionTypesSet);
   const apps = [];

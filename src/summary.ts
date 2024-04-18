@@ -58,24 +58,19 @@ function extractLocalizedString(ls?: Output<typeof LocalizableStringSchema>) {
 
 export function extractSummary(config: Output<typeof ExtensionSchema>) {
   // build actions list
-  const actions: Output<typeof ActionSchema>[] = [];
-  if (config.actions) {
-    actions.push(...config.actions);
-  } else if (config.action) {
-    actions.push(config.action);
-  } else {
-    actions.push(config);
-  }
+  const actions = config.actions
+    ? config.actions
+    : config.action
+      ? [config.action]
+      : [];
 
   // extract icon
   const icon = (() => {
     let parsedIcon;
-    if (config.icon) {
-      parsedIcon = standardizeIcon(config.icon, config);
-    }
-    for (const action of actions) {
-      if (action.icon) {
-        parsedIcon = standardizeIcon(action.icon, action);
+    for (const obj of [config, ...actions]) {
+      if (obj.icon) {
+        parsedIcon = standardizeIcon(obj.icon, obj);
+        break;
       }
     }
     if (parsedIcon?.ok) {
@@ -89,19 +84,17 @@ export function extractSummary(config: Output<typeof ExtensionSchema>) {
   if (config.module) {
     actionTypesSet.add("javascript");
   } else {
-    for (const action of actions) {
-      let found = false;
+    for (const action of [...actions, config]) {
       for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
         if (keys.some((key) => action.hasOwnProperty(key))) {
           actionTypesSet.add(type);
-          found = true;
           break;
         }
       }
-      if (!found) {
-        actionTypesSet.add("none");
-      }
     }
+  }
+  if (actionTypesSet.size === 0 && actions.length > 0) {
+    actionTypesSet.add("none"); // e.g. word & character count
   }
   const actionTypes = Array.from(actionTypesSet);
 
