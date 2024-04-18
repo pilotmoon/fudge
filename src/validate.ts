@@ -53,7 +53,7 @@ export const IdentifierSchema = string([
   ),
 ]);
 
-const VersionNumberSchema = number("Must be a number", [
+export const VersionNumberSchema = number("Must be a number", [
   safeInteger("Must be an integer"),
   minValue(1),
 ]);

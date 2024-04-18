@@ -741,7 +741,9 @@ function extractSummary(config2) {
     keywords: config2.keywords,
     icon: icon3,
     entitlements: config2.entitlements?.length ? config2.entitlements : undefined,
-    apps: apps.length ? apps : undefined
+    apps: apps.length ? apps : undefined,
+    macosVersion: config2["macos version"],
+    popclipVersion: config2["popclip version"]
   });
 }
 var SENTINEL_KEYS = {
@@ -767,7 +769,9 @@ var ExtensionsSummarySchema = object4({
   })),
   actionTypes: array3(ActionTypeSchema),
   entitlements: optional3(array3(SaneStringSchema)),
-  apps: optional3(array3(object4({ name: SaneStringSchema, link: SaneStringSchema })))
+  apps: optional3(array3(object4({ name: SaneStringSchema, link: SaneStringSchema }))),
+  macosVersion: optional3(SaneStringSchema),
+  popclipVersion: optional3(VersionNumberSchema)
 });
 export {
   validateStaticConfig,

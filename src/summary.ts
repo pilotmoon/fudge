@@ -14,6 +14,7 @@ import {
   AppSchema,
   LocalizableStringSchema,
   SaneStringSchema,
+  VersionNumberSchema,
 } from "./validate";
 import { standardizeIcon } from "./icon";
 
@@ -46,6 +47,8 @@ const ExtensionsSummarySchema = object({
   apps: optional(
     array(object({ name: SaneStringSchema, link: SaneStringSchema })),
   ),
+  macosVersion: optional(SaneStringSchema),
+  popclipVersion: optional(VersionNumberSchema),
 });
 
 function extractLocalizedString(ls?: Output<typeof LocalizableStringSchema>) {
@@ -119,5 +122,7 @@ export function extractSummary(config: Output<typeof ExtensionSchema>) {
     icon: icon,
     entitlements: config.entitlements?.length ? config.entitlements : undefined,
     apps: apps.length ? apps : undefined,
+    macosVersion: config["macos version"],
+    popclipVersion: config["popclip version"],
   });
 }
