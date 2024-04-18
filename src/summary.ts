@@ -86,17 +86,21 @@ export function extractSummary(config: Output<typeof ExtensionSchema>) {
 
   // extract action types
   const actionTypesSet = new Set<string>();
-  for (const action of actions) {
-    let found = false;
-    for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
-      if (keys.some((key) => action.hasOwnProperty(key))) {
-        actionTypesSet.add(type);
-        found = true;
-        break;
+  if (config.module) {
+    actionTypesSet.add("javascript");
+  } else {
+    for (const action of actions) {
+      let found = false;
+      for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
+        if (keys.some((key) => action.hasOwnProperty(key))) {
+          actionTypesSet.add(type);
+          found = true;
+          break;
+        }
       }
-    }
-    if (!found) {
-      actionTypesSet.add("none");
+      if (!found) {
+        actionTypesSet.add("none");
+      }
     }
   }
   const actionTypes = Array.from(actionTypesSet);
