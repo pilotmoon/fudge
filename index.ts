@@ -1,10 +1,11 @@
-export { loadStaticConfig } from "./src/loader.js";
-export { validateStaticConfig, IdentifierSchema } from "./src/validate.js";
-export { configFromText } from "./src/snippet.js";
-export { standardizeConfig, standardizeKey } from "./src/std.js";
+export { type Config } from "./src/config.js";
 export {
   descriptorStringFromComponents,
-  standardizeIcon,
   isSingleEmoji,
+  standardizeIcon,
 } from "./src/icon.js";
-export { type Config } from "./src/config.js";
+export { loadStaticConfig } from "./src/loader.js";
+export { configFromText } from "./src/snippet.js";
+export { standardizeConfig, standardizeKey } from "./src/std.js";
+export { extractSummary } from "./src/summary.js";
+export { validateStaticConfig } from "./src/validate.js";

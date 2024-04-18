@@ -89,7 +89,6 @@ export function descriptorStringFromComponents(
 }
 
 export function standardizeIcon(specifier: string, extraParams: unknown) {
-  log("standardizeIcon", specifier, extraParams);
   const parsed = parseDescriptorString(specifier);
   if (!parsed.ok) {
     return parsed;

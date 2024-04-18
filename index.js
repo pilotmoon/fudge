@@ -1,50 +1,16 @@
-// src/loader.ts
-import {array, object, parse as parse2, string} from "valibot";
+// src/icon.ts
+import {kebabCase} from "case-anything";
+import emojiRegex from "emoji-regex";
+import * as v from "valibot";
 
-// src/parsers.ts
-import {parse as parsePlist} from "fast-plist";
-import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
-import {ValiError, parse, record, unknown} from "valibot";
-function parsePlistObject(plist) {
-  try {
-    return parse(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
-  } catch (e) {
-    if (e instanceof ValiError) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid plist: ${e.message}`);
-    }
-    throw new Error("Invalid plist");
+// src/log.ts
+function log(...args) {
+  if (typeof print === "function") {
+    print(...args);
+  } else if (typeof console === "object" && typeof console.log === "function") {
+    console.log(...args);
   }
 }
-function parseJsonObject(jsonSource) {
-  try {
-    return parse(VConfigObject, JSON.parse(jsonSource));
-  } catch (e) {
-    if (e instanceof ValiError) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid JSON: ${e.message}`);
-    }
-    throw new Error("Invalid JSON");
-  }
-}
-function parseYamlObject(yamlSource) {
-  try {
-    return parse(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
-  } catch (e) {
-    if (e instanceof ValiError) {
-      throw new Error(`Invalid config: ${e.message}`);
-    }
-    if (e instanceof Error) {
-      throw new Error(`Invalid YAML: ${e.message}`);
-    }
-    throw new Error("Invalid YAML");
-  }
-}
-var VConfigObject = record(unknown());
 
 // src/std.ts
 import {lowerCase} from "case-anything";
@@ -108,13 +74,249 @@ function standardizeConfig(config2) {
   return transformConfig(config2, standardizeKey);
 }
 
-// src/snippet.ts
-function lines(string) {
-  return string.split(/\r\n|\n|\r/);
+// src/valibotIssues.ts
+function formatValiIssues(issues) {
+  const messages = [];
+  for (const issue of issues) {
+    const fmt = formatValiIssue(issue);
+    if (fmt) {
+      messages.push(`${fmt.dotPath}: ${fmt.message}`);
+    }
+  }
+  return messages.join("\n");
 }
-var extractPrefixedBlock = function(string, prefix) {
+var formatValiIssue = function(issue) {
+  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
+  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
+    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
+    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
+    return fmt;
+  }
+  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
+  return { dotPath, message };
+};
+
+// src/icon.ts
+function isSingleEmoji(string2) {
+  return r.test(string2);
+}
+var renderModifier = function(key, value) {
+  key = kebabCase(key);
+  if (key === "shape" && typeof value === "string") {
+    return SHAPE_NAMES.includes(value) ? value : "";
+  }
+  if (typeof value === "boolean")
+    return value ? key : `${key}=0`;
+  if (typeof value === "number")
+    return `${key}=${value.toString()}`;
+  if (typeof value === "string")
+    return `${key}=${value}`;
+  return "";
+};
+function descriptorStringFromComponents(components) {
+  const { prefix, payload, modifiers } = components;
+  const modifierString = Object.entries(modifiers).map(([key, value]) => renderModifier(key, value)).filter((x) => x.length > 0).join(" ");
+  return `${modifierString} ${prefix}:${payload}`.trim();
+}
+function standardizeIcon(specifier, extraParams) {
+  const parsed = parseDescriptorString(specifier);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  for (const shape of SHAPE_NAMES) {
+    if (parsed.result.modifiers?.[shape]) {
+      parsed.result.modifiers.shape = shape;
+      delete parsed.result.modifiers[shape];
+    }
+  }
+  const validated = v.safeParse(IconModifiersSchema, {
+    ...parsed.result.modifiers,
+    ...standardizeConfig(extraParams)
+  });
+  if (!validated.success) {
+    return {
+      ok: false,
+      error: `invalid modifiers: ${formatValiIssues(validated.issues)}`
+    };
+  }
+  for (const [key, value] of Object.entries(validated.output)) {
+    if (value === defaultModifierValues.get(key)) {
+      delete validated.output[key];
+    }
+  }
+  parsed.result.modifiers = validated.output;
+  return parsed;
+}
+var parseDescriptorString = function(string2) {
+  string2 = string2.trim();
+  {
+    const components2 = string2.match(/^(?:text:)?\[\[(.{1,3})\]\]$/);
+    if (components2)
+      string2 = `square filled ${components2[1]}`;
+  }
+  {
+    const components2 = string2.match(/^text:((?:[a-z]{2,10} )+)(\S{1,3}|\S \S)/);
+    if (components2)
+      string2 = `${components2[1]}text:${components2[2]}`;
+  }
+  {
+    const components2 = string2.match(/^[^:]+\.(svg|png)$/i);
+    if (components2)
+      string2 = `file:${components2[0]}`;
+  }
+  if (isSingleEmoji(string2)) {
+    log("single emoji detected");
+    return {
+      ok: true,
+      result: {
+        prefix: "text",
+        payload: string2,
+        modifiers: {}
+      }
+    };
+  }
+  const components = string2.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/is);
+  if (!components) {
+    return {
+      ok: false,
+      error: `invalid icon string: '${string2}'`
+    };
+  }
+  const modifiers = parseModifierString(components[1].trim());
+  let specifier = components[2];
+  if (specifier.length <= 3) {
+    specifier = `text:${specifier}`;
+  }
+  const match = specifier.match(/^([a-z_]+):(.*)$/is);
+  if (!match) {
+    return {
+      ok: false,
+      error: `invalid icon specifier: '${specifier}'`
+    };
+  }
+  const prefix = match[1];
+  const payload = match[2];
+  return {
+    ok: true,
+    result: {
+      prefix,
+      payload,
+      modifiers
+    }
+  };
+};
+var parseModifierString = function(modifiers) {
+  const result = {};
+  if (modifiers.length > 0) {
+    for (const str of modifiers.split(" ")) {
+      const regex = /^([a-z_-]+)(?:=([+-]?[0-9a-z]{0,6}))?$/i;
+      const components = str.match(regex);
+      if (components && components.length === 3) {
+        result[standardizeKey(components[1])] = components[2] ?? true;
+      }
+    }
+  }
+  return result;
+};
+var r = new RegExp("^(" + emojiRegex().source + ")$");
+var IntegerFromString = v.union([
+  v.number([v.safeInteger()]),
+  v.transform(v.string(), (x) => Number(x), [v.safeInteger()])
+]);
+var BooleanFromString = v.union([
+  v.boolean(),
+  v.transform(v.string(), (x) => x === "" || x === "1")
+]);
+var SHAPE_NAMES = ["search", "circle", "square"];
+var ICON_PARAM_DEFAULTS = {
+  "preserve color": undefined,
+  "preserve aspect": undefined,
+  shape: undefined,
+  filled: false,
+  strike: false,
+  monospaced: false,
+  "flip x": false,
+  "flip y": false,
+  "move x": 0,
+  "move y": 0,
+  scale: 100,
+  rotate: 0
+};
+var IconModifiersSchema = v.object({
+  "preserve color": v.optional(BooleanFromString),
+  "preserve aspect": v.optional(BooleanFromString),
+  shape: v.optional(v.picklist(SHAPE_NAMES)),
+  filled: v.optional(BooleanFromString),
+  strike: v.optional(BooleanFromString),
+  monospaced: v.optional(BooleanFromString),
+  "flip x": v.optional(BooleanFromString),
+  "flip y": v.optional(BooleanFromString),
+  "move x": v.optional(IntegerFromString),
+  "move y": v.optional(IntegerFromString),
+  scale: v.optional(IntegerFromString),
+  rotate: v.optional(IntegerFromString)
+});
+var defaultModifierValues = new Map(Object.entries(ICON_PARAM_DEFAULTS));
+var IconComponentsSchema = v.object({
+  prefix: v.string(),
+  payload: v.string(),
+  modifiers: v.object({}, v.unknown())
+});
+// src/loader.ts
+import {array, object as object2, parse as parse2, string as string2} from "valibot";
+
+// src/parsers.ts
+import {parse as parsePlist} from "fast-plist";
+import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
+import {ValiError, parse, record, unknown as unknown2} from "valibot";
+function parsePlistObject(plist) {
+  try {
+    return parse(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
+  } catch (e) {
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid plist: ${e.message}`);
+    }
+    throw new Error("Invalid plist");
+  }
+}
+function parseJsonObject(jsonSource) {
+  try {
+    return parse(VConfigObject, JSON.parse(jsonSource));
+  } catch (e) {
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid JSON: ${e.message}`);
+    }
+    throw new Error("Invalid JSON");
+  }
+}
+function parseYamlObject(yamlSource) {
+  try {
+    return parse(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
+  } catch (e) {
+    if (e instanceof ValiError) {
+      throw new Error(`Invalid config: ${e.message}`);
+    }
+    if (e instanceof Error) {
+      throw new Error(`Invalid YAML: ${e.message}`);
+    }
+    throw new Error("Invalid YAML");
+  }
+}
+var VConfigObject = record(unknown2());
+
+// src/snippet.ts
+function lines(string2) {
+  return string2.split(/\r\n|\n|\r/);
+}
+var extractPrefixedBlock = function(string2, prefix) {
   const result = [];
-  for (const line of lines(string)) {
+  for (const line of lines(string2)) {
     if (line !== "" && (prefix === "" || line.startsWith(prefix))) {
       result.push(line.replace(prefix, ""));
     } else {
@@ -123,8 +325,8 @@ var extractPrefixedBlock = function(string, prefix) {
   }
   return result.join("\n");
 };
-var candidateYaml = function(string) {
-  const components = string.match(/([^\n]*)# ?popclip.+$/is);
+var candidateYaml = function(string2) {
+  const components = string2.match(/([^\n]*)# ?popclip.+$/is);
   if (components?.length !== 2) {
     return null;
   }
@@ -267,9 +469,9 @@ function loadStaticConfig(obj) {
   }
   return result;
 }
-var VConfigFiles = array(object({
-  name: string(),
-  contents: string()
+var VConfigFiles = array(object2({
+  name: string2(),
+  contents: string2()
 }));
 var plistConfigFileName = "Config.plist";
 var jsonConfigFileName = "Config.json";
@@ -279,6 +481,17 @@ var configFileNames = [
   jsonConfigFileName,
   yamlConfigFileName
 ];
+// src/summary.ts
+import {
+array as array3,
+object as object4,
+optional as optional3,
+parse as parse4,
+picklist as picklist2,
+record as record3,
+unknown as unknown3
+} from "valibot";
+
 // src/validate.ts
 import {
 ValiError as ValiError2,
@@ -304,212 +517,6 @@ safeInteger as safeInteger2,
 string as string3,
 union as union2
 } from "valibot";
-
-// src/icon.ts
-import {kebabCase} from "case-anything";
-import emojiRegex from "emoji-regex";
-import * as v from "valibot";
-
-// src/log.ts
-function log(...args) {
-  if (typeof print === "function") {
-    print(...args);
-  } else if (typeof console === "object" && typeof console.log === "function") {
-    console.log(...args);
-  }
-}
-
-// src/valibotIssues.ts
-function formatValiIssues(issues) {
-  const messages = [];
-  for (const issue of issues) {
-    const fmt = formatValiIssue(issue);
-    if (fmt) {
-      messages.push(`${fmt.dotPath}: ${fmt.message}`);
-    }
-  }
-  return messages.join("\n");
-}
-var formatValiIssue = function(issue) {
-  const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
-  if (Array.isArray(issue.issues) && issue.issues.length > 0) {
-    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
-    fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
-    return fmt;
-  }
-  const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
-  return { dotPath, message };
-};
-
-// src/icon.ts
-function isSingleEmoji(string3) {
-  return r.test(string3);
-}
-var renderModifier = function(key, value) {
-  key = kebabCase(key);
-  if (key === "shape" && typeof value === "string") {
-    return SHAPE_NAMES.includes(value) ? value : "";
-  }
-  if (typeof value === "boolean")
-    return value ? key : `${key}=0`;
-  if (typeof value === "number")
-    return `${key}=${value.toString()}`;
-  if (typeof value === "string")
-    return `${key}=${value}`;
-  return "";
-};
-function descriptorStringFromComponents(components) {
-  const { prefix, payload, modifiers } = components;
-  const modifierString = Object.entries(modifiers).map(([key, value]) => renderModifier(key, value)).filter((x) => x.length > 0).join(" ");
-  return `${modifierString} ${prefix}:${payload}`.trim();
-}
-function standardizeIcon(specifier, extraParams) {
-  log("standardizeIcon", specifier, extraParams);
-  const parsed = parseDescriptorString(specifier);
-  if (!parsed.ok) {
-    return parsed;
-  }
-  for (const shape of SHAPE_NAMES) {
-    if (parsed.result.modifiers?.[shape]) {
-      parsed.result.modifiers.shape = shape;
-      delete parsed.result.modifiers[shape];
-    }
-  }
-  const validated = v.safeParse(IconModifiersSchema, {
-    ...parsed.result.modifiers,
-    ...standardizeConfig(extraParams)
-  });
-  if (!validated.success) {
-    return {
-      ok: false,
-      error: `invalid modifiers: ${formatValiIssues(validated.issues)}`
-    };
-  }
-  for (const [key, value] of Object.entries(validated.output)) {
-    if (value === defaultModifierValues.get(key)) {
-      delete validated.output[key];
-    }
-  }
-  parsed.result.modifiers = validated.output;
-  return parsed;
-}
-var parseDescriptorString = function(string3) {
-  string3 = string3.trim();
-  {
-    const components2 = string3.match(/^(?:text:)?\[\[(.{1,3})\]\]$/);
-    if (components2)
-      string3 = `square filled ${components2[1]}`;
-  }
-  {
-    const components2 = string3.match(/^text:((?:[a-z]{2,10} )+)(\S{1,3}|\S \S)/);
-    if (components2)
-      string3 = `${components2[1]}text:${components2[2]}`;
-  }
-  {
-    const components2 = string3.match(/^[^:]+\.(svg|png)$/i);
-    if (components2)
-      string3 = `file:${components2[0]}`;
-  }
-  if (isSingleEmoji(string3)) {
-    log("single emoji detected");
-    return {
-      ok: true,
-      result: {
-        prefix: "text",
-        payload: string3,
-        modifiers: {}
-      }
-    };
-  }
-  const components = string3.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/is);
-  if (!components) {
-    return {
-      ok: false,
-      error: `invalid icon string: '${string3}'`
-    };
-  }
-  const modifiers = parseModifierString(components[1].trim());
-  let specifier = components[2];
-  if (specifier.length <= 3) {
-    specifier = `text:${specifier}`;
-  }
-  const match = specifier.match(/^([a-z_]+):(.*)$/is);
-  if (!match) {
-    return {
-      ok: false,
-      error: `invalid icon specifier: '${specifier}'`
-    };
-  }
-  const prefix = match[1];
-  const payload = match[2];
-  return {
-    ok: true,
-    result: {
-      prefix,
-      payload,
-      modifiers
-    }
-  };
-};
-var parseModifierString = function(modifiers) {
-  const result = {};
-  if (modifiers.length > 0) {
-    for (const str of modifiers.split(" ")) {
-      const regex = /^([a-z_-]+)(?:=([+-]?[0-9a-z]{0,6}))?$/i;
-      const components = str.match(regex);
-      if (components && components.length === 3) {
-        result[standardizeKey(components[1])] = components[2] ?? true;
-      }
-    }
-  }
-  return result;
-};
-var r = new RegExp("^(" + emojiRegex().source + ")$");
-var IntegerFromString = v.union([
-  v.number([v.safeInteger()]),
-  v.transform(v.string(), (x) => Number(x), [v.safeInteger()])
-]);
-var BooleanFromString = v.union([
-  v.boolean(),
-  v.transform(v.string(), (x) => x === "" || x === "1")
-]);
-var SHAPE_NAMES = ["search", "circle", "square"];
-var ICON_PARAM_DEFAULTS = {
-  "preserve color": undefined,
-  "preserve aspect": undefined,
-  shape: undefined,
-  filled: false,
-  strike: false,
-  monospaced: false,
-  "flip x": false,
-  "flip y": false,
-  "move x": 0,
-  "move y": 0,
-  scale: 100,
-  rotate: 0
-};
-var IconModifiersSchema = v.object({
-  "preserve color": v.optional(BooleanFromString),
-  "preserve aspect": v.optional(BooleanFromString),
-  shape: v.optional(v.picklist(SHAPE_NAMES)),
-  filled: v.optional(BooleanFromString),
-  strike: v.optional(BooleanFromString),
-  monospaced: v.optional(BooleanFromString),
-  "flip x": v.optional(BooleanFromString),
-  "flip y": v.optional(BooleanFromString),
-  "move x": v.optional(IntegerFromString),
-  "move y": v.optional(IntegerFromString),
-  scale: v.optional(IntegerFromString),
-  rotate: v.optional(IntegerFromString)
-});
-var defaultModifierValues = new Map(Object.entries(ICON_PARAM_DEFAULTS));
-var IconComponentsSchema = v.object({
-  prefix: v.string(),
-  payload: v.string(),
-  modifiers: v.object({}, v.unknown())
-});
-
-// src/validate.ts
 function validateStaticConfig(config2) {
   try {
     return parse3(ExtensionSchema, config2);
@@ -530,7 +537,10 @@ var StringTableSchema = intersect([
     en: nonOptional(SaneStringSchema, "An 'en' string is required")
   })
 ]);
-var LocalizableStringSchema = union2([SaneStringSchema, StringTableSchema]);
+var LocalizableStringSchema = union2([
+  SaneStringSchema,
+  StringTableSchema
+]);
 var IdentifierSchema = string3([
   minLength(1),
   maxLength(100),
@@ -663,7 +673,105 @@ var ExtensionCoreSchema = object3({
   "options title": optional2(LocalizableStringSchema),
   "options script file": optional2(null_("Not supported"))
 });
-var ExtensionSchema = merge([ExtensionCoreSchema, ActionSchema]);
+var MetadataSchema = object3({
+  description: optional2(LocalizableStringSchema),
+  keywords: optional2(SaneStringSchema)
+});
+var ExtensionSchema = merge([
+  ExtensionCoreSchema,
+  ActionSchema,
+  MetadataSchema
+]);
+
+// src/summary.ts
+var extractLocalizedString = function(ls) {
+  if (typeof ls === "string") {
+    return ls;
+  } else if (typeof ls?.en === "string") {
+    return ls.en;
+  }
+};
+function extractSummary(config2) {
+  const actions = [];
+  if (config2.actions) {
+    actions.push(...config2.actions);
+  } else if (config2.action) {
+    actions.push(config2.action);
+  } else {
+    actions.push(config2);
+  }
+  const icon3 = (() => {
+    let parsedIcon;
+    if (config2.icon) {
+      parsedIcon = standardizeIcon(config2.icon, config2);
+    }
+    for (const action of actions) {
+      if (action.icon) {
+        parsedIcon = standardizeIcon(action.icon, action);
+      }
+    }
+    if (parsedIcon?.ok) {
+      return parsedIcon.result;
+    }
+    return;
+  })();
+  const actionTypesSet = new Set;
+  for (const action of actions) {
+    for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
+      if (keys.some((key) => action.hasOwnProperty(key))) {
+        actionTypesSet.add(type);
+        break;
+      }
+    }
+    actionTypesSet.add("none");
+  }
+  const actionTypes = Array.from(actionTypesSet);
+  const apps = [];
+  for (const obj of [config2, ...actions]) {
+    if (obj.apps) {
+      for (const app of obj.apps) {
+        apps.push({ name: app.name, link: app.link });
+      }
+    } else if (obj.app) {
+      apps.push({ name: obj.app.name, link: obj.app.link });
+    }
+  }
+  return parse4(ExtensionsSummarySchema, {
+    name: extractLocalizedString(config2.name),
+    actionTypes,
+    identifier: config2.identifier,
+    description: extractLocalizedString(config2.description),
+    keywords: config2.keywords,
+    icon: icon3,
+    entitlements: config2.entitlements?.length ? config2.entitlements : undefined,
+    apps: apps.length ? apps : undefined
+  });
+}
+var SENTINEL_KEYS = {
+  service: ["service name"],
+  url: ["url"],
+  keypress: ["key combo", "key combos"],
+  applescript: ["applescript", "applescript file", "applescript call"],
+  shellscript: ["shell script", "shell script file"],
+  javascript: ["javascript", "javascript file"],
+  shortcut: ["shortcut name"],
+  none: []
+};
+var ActionTypeSchema = picklist2(Object.keys(SENTINEL_KEYS));
+var ExtensionsSummarySchema = object4({
+  name: SaneStringSchema,
+  identifier: optional3(SaneStringSchema),
+  description: optional3(SaneStringSchema),
+  keywords: optional3(SaneStringSchema),
+  icon: optional3(object4({
+    prefix: SaneStringSchema,
+    payload: SaneStringSchema,
+    modifiers: record3(unknown3())
+  })),
+  actionTypes: array3(ActionTypeSchema),
+  entitlements: optional3(array3(SaneStringSchema)),
+  apps: optional3(array3(object4({ name: SaneStringSchema, link: SaneStringSchema })))
+});
 export {
   validateStaticConfig,
   standardizeKey,
@@ -671,7 +779,7 @@ export {
   standardizeConfig,
   loadStaticConfig,
   isSingleEmoji,
+  extractSummary,
   descriptorStringFromComponents,
-  configFromText,
-  IdentifierSchema
+  configFromText
 };

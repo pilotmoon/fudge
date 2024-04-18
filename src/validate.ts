@@ -21,7 +21,6 @@ import {
   safeInteger,
   string,
   union,
-  unknown,
 } from "valibot";
 import { IconModifiersSchema } from "./icon";
 import { formatValiIssues } from "./valibotIssues";
@@ -29,7 +28,7 @@ import { formatValiIssues } from "./valibotIssues";
 /***********************************************************
   Schemas
 ***********************************************************/
-const SaneStringSchema = string([minLength(1), maxLength(500)]);
+export const SaneStringSchema = string([minLength(1), maxLength(500)]);
 const SaneStringAllowingEmptySchema = string([maxLength(500)]);
 const LongStringSchema = string([minLength(1), maxLength(10000)]);
 
@@ -40,7 +39,10 @@ const StringTableSchema = intersect([
   }),
 ]);
 
-const LocalizableStringSchema = union([SaneStringSchema, StringTableSchema]);
+export const LocalizableStringSchema = union([
+  SaneStringSchema,
+  StringTableSchema,
+]);
 
 export const IdentifierSchema = string([
   minLength(1),
@@ -62,7 +64,7 @@ const VersionStringSchema = string("Must be a string", [
 
 const IconSchema = union([LongStringSchema, null_(), literal(false)]);
 
-const AppSchema = object({
+export const AppSchema = object({
   name: nonOptional(SaneStringSchema, "App name is required"),
   link: nonOptional(SaneStringSchema, "App link is required"),
   "check installed": optional(boolean()),
@@ -177,7 +179,7 @@ const JavaScriptActionSchema = object({
   "javascript file": optional(SaneStringSchema),
 });
 
-const ActionSchema = merge([
+export const ActionSchema = merge([
   ActionCoreSchema,
   ActionFlagsSchema,
   IconModifiersSchema,
@@ -212,7 +214,16 @@ const ExtensionCoreSchema = object({
   "options script file": optional(null_("Not supported")),
 });
 
-const ExtensionSchema = merge([ExtensionCoreSchema, ActionSchema]);
+const MetadataSchema = object({
+  description: optional(LocalizableStringSchema),
+  keywords: optional(SaneStringSchema),
+});
+
+export const ExtensionSchema = merge([
+  ExtensionCoreSchema,
+  ActionSchema,
+  MetadataSchema,
+]);
 
 export function validateStaticConfig(config: unknown) {
   try {
