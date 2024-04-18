@@ -15,7 +15,7 @@
     "fast-stable-stringify": "1.0.0"
   },
   "peerDependencies": {
-    "typescript": "5.4.2"
+    "typescript": "5.4.5"
   },
   "dependencies": {
     "case-anything": "2.1.13",

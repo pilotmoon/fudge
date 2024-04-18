@@ -717,13 +717,17 @@ function extractSummary(config2) {
   })();
   const actionTypesSet = new Set;
   for (const action of actions) {
+    let found = false;
     for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
       if (keys.some((key) => action.hasOwnProperty(key))) {
         actionTypesSet.add(type);
+        found = true;
         break;
       }
     }
-    actionTypesSet.add("none");
+    if (!found) {
+      actionTypesSet.add("none");
+    }
   }
   const actionTypes = Array.from(actionTypesSet);
   const apps = [];
