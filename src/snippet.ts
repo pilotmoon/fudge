@@ -40,11 +40,11 @@ function candidateYaml(string: string) {
   return candidateYaml.replace(/\u00A0/g, " ").trim();
 }
 
-enum EmbedType {
+export enum EmbedType {
   Unknown = "unknown",
   Yaml = "yaml",
   ShellScript = "shell script",
-  Executable = "executable shell script",
+  ExecutableShellScript = "executable shell script",
   AppleScript = "applescript",
   JavaScript = "javascript",
   TypeScript = "typescript",
@@ -86,7 +86,7 @@ function embedTypeFromText(text: string, yaml: string, config: Config) {
     } else if (interpreter.length > 0) {
       result = EmbedType.ShellScript;
     } else if (text.startsWith("#!")) {
-      result = EmbedType.Executable;
+      result = EmbedType.ExecutableShellScript;
     }
   } else {
     result = EmbedType.Yaml;
@@ -105,7 +105,11 @@ function hasTabsInBlock(yamlSource: string) {
   return false;
 }
 
-export function configFromText(text: string) {
+function forceString(val: unknown) {
+  return typeof val === "string" ? val : "";
+}
+
+export function configFromText(text: string, suffix: string = "") {
   const yaml = candidateYaml(text);
   if (yaml === null) {
     return null;
@@ -115,26 +119,68 @@ export function configFromText(text: string) {
   }
   const config = standardizeConfig(parseYamlObject(yaml));
   const embedType = embedTypeFromText(text, yaml, config);
-  return { config, embedType };
+  suffix = forceString(suffix);
+  suffix ||= forceString(config["suffix"]);
+  suffix ||= forceString(suffixForEmbedType(embedType));
+  const fileName = suffix ? `Config.${suffix}` : "Config";
+  const isExecutable = isExecutableForEmbedType(embedType);
+  return { config, embedType, fileName, isExecutable };
+}
+
+function suffixForEmbedType(embedType: EmbedType) {
+  switch (embedType) {
+    case EmbedType.Yaml:
+      return "yaml";
+    case EmbedType.JavaScript:
+    case EmbedType.JavaScriptModule:
+      return "js";
+    case EmbedType.TypeScript:
+    case EmbedType.TypeScriptModule:
+      return "ts";
+    case EmbedType.AppleScript:
+      return "applescript";
+    default:
+      return null;
+  }
+}
+
+function isExecutableForEmbedType(embedType: EmbedType) {
+  switch (embedType) {
+    case EmbedType.ExecutableShellScript:
+      return true;
+    default:
+      return false;
+  }
+}
+
+function selfReferenceFieldNameForEmbedType(embedType: EmbedType) {
+  switch (embedType) {
+    case EmbedType.ShellScript:
+    case EmbedType.ExecutableShellScript:
+      return "shell script file";
+    case EmbedType.JavaScript:
+    case EmbedType.TypeScript:
+      return "javascript file";
+    case EmbedType.AppleScript:
+      return "applescript file";
+    case EmbedType.JavaScriptModule:
+    case EmbedType.TypeScriptModule:
+      return "module";
+    case EmbedType.Yaml:
+    case EmbedType.Unknown:
+    default:
+      return null;
+  }
 }
 
 export function loadSnippet(text: string, fileName: string) {
   try {
     const { config, embedType } = configFromText(text) ?? {
-      config: {},
+      config: {} as Config,
       embedType: EmbedType.Unknown,
     };
-    const fieldName = {
-      [EmbedType.ShellScript]: "shell script file",
-      [EmbedType.Executable]: "shell script file",
-      [EmbedType.JavaScript]: "javascript file",
-      [EmbedType.TypeScript]: "javascript file",
-      [EmbedType.AppleScript]: "applescript file",
-      [EmbedType.JavaScriptModule]: "module",
-      [EmbedType.TypeScriptModule]: "module",
-      [EmbedType.Yaml]: null,
-      [EmbedType.Unknown]: null,
-    }[embedType];
+    // fix up the config to refer to itself if needed
+    const fieldName = selfReferenceFieldNameForEmbedType(embedType);
     if (fieldName) {
       config[fieldName] = fileName;
     }
