@@ -211,7 +211,7 @@ const ExtensionCoreSchema = object({
   // options
   options: optional(array(OptionSchema)),
   "options title": optional(LocalizableStringSchema),
-  "options script file": optional(null_("Not supported")),
+  "options script file": optional(SaneStringSchema),
 });
 
 const MetadataSchema = object({

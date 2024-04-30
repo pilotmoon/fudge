@@ -713,7 +713,7 @@ var ExtensionCoreSchema = object3({
   actions: optional2(array2(ActionSchema)),
   options: optional2(array2(OptionSchema)),
   "options title": optional2(LocalizableStringSchema),
-  "options script file": optional2(null_("Not supported"))
+  "options script file": optional2(SaneStringSchema)
 });
 var MetadataSchema = object3({
   description: optional2(LocalizableStringSchema),

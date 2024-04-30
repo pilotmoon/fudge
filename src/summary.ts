@@ -10,7 +10,6 @@ import {
 } from "valibot";
 import {
   ExtensionSchema,
-  ActionSchema,
   AppSchema,
   LocalizableStringSchema,
   SaneStringSchema,
