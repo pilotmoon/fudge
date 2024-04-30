@@ -397,9 +397,9 @@ function configFromText(text, suffix = "") {
   }
   const config2 = standardizeConfig(parseYamlObject(yaml));
   const embedType = embedTypeFromText(text, yaml, config2);
-  suffix = forceString(suffix);
+  suffix = forceString(suffixForEmbedType(embedType));
+  suffix ||= forceString(suffix);
   suffix ||= forceString(config2["suffix"]);
-  suffix ||= forceString(suffixForEmbedType(embedType));
   const fileName = suffix ? `Config.${suffix}` : "Config";
   const isExecutable = isExecutableForEmbedType(embedType);
   return { config: config2, embedType, fileName, isExecutable };
