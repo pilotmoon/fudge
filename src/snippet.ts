@@ -1,4 +1,5 @@
 import { Config } from "./config.js";
+import { log } from "./log.js";
 import { parseYamlObject } from "./parsers.js";
 import { standardizeConfig, standardizeKey as sk } from "./std.js";
 
@@ -109,7 +110,7 @@ function forceString(val: unknown) {
   return typeof val === "string" ? val : "";
 }
 
-export function configFromText(text: string, suffix: string = "") {
+export function configFromText(text: string, externalSuffix: string = "") {
   const yaml = candidateYaml(text);
   if (yaml === null) {
     return null;
@@ -119,9 +120,10 @@ export function configFromText(text: string, suffix: string = "") {
   }
   const config = standardizeConfig(parseYamlObject(yaml));
   const embedType = embedTypeFromText(text, yaml, config);
-  suffix = forceString(suffixForEmbedType(embedType));
-  suffix ||= forceString(suffix);
+  let suffix = forceString(suffixForEmbedType(embedType));
+  suffix ||= forceString(externalSuffix);
   suffix ||= forceString(config["suffix"]);
+  log("suffix", suffix);
   const fileName = suffix ? `Config.${suffix}` : "Config";
   const isExecutable = isExecutableForEmbedType(embedType);
   return { config, embedType, fileName, isExecutable };

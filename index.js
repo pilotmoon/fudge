@@ -387,7 +387,7 @@ var hasTabsInBlock = function(yamlSource) {
 var forceString = function(val) {
   return typeof val === "string" ? val : "";
 };
-function configFromText(text, suffix = "") {
+function configFromText(text, externalSuffix = "") {
   const yaml = candidateYaml(text);
   if (yaml === null) {
     return null;
@@ -397,9 +397,10 @@ function configFromText(text, suffix = "") {
   }
   const config2 = standardizeConfig(parseYamlObject(yaml));
   const embedType = embedTypeFromText(text, yaml, config2);
-  suffix = forceString(suffixForEmbedType(embedType));
-  suffix ||= forceString(suffix);
+  let suffix = forceString(suffixForEmbedType(embedType));
+  suffix ||= forceString(externalSuffix);
   suffix ||= forceString(config2["suffix"]);
+  log("suffix", suffix);
   const fileName = suffix ? `Config.${suffix}` : "Config";
   const isExecutable = isExecutableForEmbedType(embedType);
   return { config: config2, embedType, fileName, isExecutable };
