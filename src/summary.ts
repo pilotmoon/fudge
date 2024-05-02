@@ -30,9 +30,9 @@ const SENTINEL_KEYS = {
 const ActionTypeSchema = picklist(Object.keys(SENTINEL_KEYS));
 
 const ExtensionsSummarySchema = object({
-  name: SaneStringSchema,
+  name: LocalizableStringSchema,
   identifier: optional(SaneStringSchema),
-  description: optional(SaneStringSchema),
+  description: optional(LocalizableStringSchema),
   keywords: optional(SaneStringSchema),
   icon: optional(
     object({
@@ -50,12 +50,8 @@ const ExtensionsSummarySchema = object({
   popclipVersion: optional(VersionNumberSchema),
 });
 
-function extractLocalizedString(ls?: Output<typeof LocalizableStringSchema>) {
-  if (typeof ls === "string") {
-    return ls;
-  } else if (typeof ls?.en === "string") {
-    return ls.en;
-  }
+function normalizeLocalizedString(ls?: Output<typeof LocalizableStringSchema>) {
+  return typeof ls === "object" && Object.entries(ls).length === 1 ? ls.en : ls;
 }
 
 export function extractSummary(config: Output<typeof ExtensionSchema>) {
@@ -113,10 +109,10 @@ export function extractSummary(config: Output<typeof ExtensionSchema>) {
   }
 
   return parse(ExtensionsSummarySchema, {
-    name: extractLocalizedString(config.name),
+    name: normalizeLocalizedString(config.name),
     actionTypes,
     identifier: config.identifier,
-    description: extractLocalizedString(config.description),
+    description: normalizeLocalizedString(config.description),
     keywords: config.keywords,
     icon: icon,
     entitlements: config.entitlements?.length ? config.entitlements : undefined,

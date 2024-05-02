@@ -726,12 +726,8 @@ var ExtensionSchema = merge([
 ]);
 
 // src/summary.ts
-var extractLocalizedString = function(ls) {
-  if (typeof ls === "string") {
-    return ls;
-  } else if (typeof ls?.en === "string") {
-    return ls.en;
-  }
+var normalizeLocalizedString = function(ls) {
+  return typeof ls === "object" && Object.entries(ls).length === 1 ? ls.en : ls;
 };
 function extractSummary(config2) {
   const actions = config2.actions ? config2.actions : config2.action ? [config2.action] : [];
@@ -776,10 +772,10 @@ function extractSummary(config2) {
     }
   }
   return parse4(ExtensionsSummarySchema, {
-    name: extractLocalizedString(config2.name),
+    name: normalizeLocalizedString(config2.name),
     actionTypes,
     identifier: config2.identifier,
-    description: extractLocalizedString(config2.description),
+    description: normalizeLocalizedString(config2.description),
     keywords: config2.keywords,
     icon: icon3,
     entitlements: config2.entitlements?.length ? config2.entitlements : undefined,
@@ -800,9 +796,9 @@ var SENTINEL_KEYS = {
 };
 var ActionTypeSchema = picklist2(Object.keys(SENTINEL_KEYS));
 var ExtensionsSummarySchema = object4({
-  name: SaneStringSchema,
+  name: LocalizableStringSchema,
   identifier: optional3(SaneStringSchema),
-  description: optional3(SaneStringSchema),
+  description: optional3(LocalizableStringSchema),
   keywords: optional3(SaneStringSchema),
   icon: optional3(object4({
     prefix: SaneStringSchema,
