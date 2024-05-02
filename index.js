@@ -529,9 +529,7 @@ array as array3,
 object as object4,
 optional as optional3,
 parse as parse4,
-picklist as picklist2,
-record as record3,
-unknown as unknown3
+picklist as picklist2
 } from "valibot";
 
 // src/validate.ts
@@ -800,11 +798,7 @@ var ExtensionsSummarySchema = object4({
   identifier: optional3(SaneStringSchema),
   description: optional3(LocalizableStringSchema),
   keywords: optional3(SaneStringSchema),
-  icon: optional3(object4({
-    prefix: SaneStringSchema,
-    payload: SaneStringSchema,
-    modifiers: record3(unknown3())
-  })),
+  icon: optional3(IconComponentsSchema),
   actionTypes: array3(ActionTypeSchema),
   entitlements: optional3(array3(SaneStringSchema)),
   apps: optional3(array3(object4({ name: SaneStringSchema, link: SaneStringSchema }))),

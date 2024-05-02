@@ -15,7 +15,7 @@ import {
   SaneStringSchema,
   VersionNumberSchema,
 } from "./validate";
-import { standardizeIcon } from "./icon";
+import { IconComponentsSchema, standardizeIcon } from "./icon";
 
 const SENTINEL_KEYS = {
   service: ["service name"],
@@ -34,13 +34,7 @@ const ExtensionsSummarySchema = object({
   identifier: optional(SaneStringSchema),
   description: optional(LocalizableStringSchema),
   keywords: optional(SaneStringSchema),
-  icon: optional(
-    object({
-      prefix: SaneStringSchema,
-      payload: SaneStringSchema,
-      modifiers: record(unknown()),
-    }),
-  ),
+  icon: optional(IconComponentsSchema),
   actionTypes: array(ActionTypeSchema),
   entitlements: optional(array(SaneStringSchema)),
   apps: optional(
