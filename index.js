@@ -1,5 +1,5 @@
 // src/icon.ts
-import {kebabCase} from "case-anything";
+import { kebabCase } from "case-anything";
 import emojiRegex from "emoji-regex";
 import * as v from "valibot";
 
@@ -13,7 +13,7 @@ function log(...args) {
 }
 
 // src/std.ts
-import {lowerCase} from "case-anything";
+import { lowerCase } from "case-anything";
 
 // src/config.ts
 function transformConfig(val, fn) {
@@ -67,11 +67,11 @@ function standardizeKey(key) {
   }
   return k;
 }
-function standardizeConfig(config2) {
-  if (typeof config2 !== "object" || config2 === null || Array.isArray(config2)) {
+function standardizeConfig(config) {
+  if (typeof config !== "object" || config === null || Array.isArray(config)) {
     throw new Error("Cannot standardize that");
   }
-  return transformConfig(config2, standardizeKey);
+  return transformConfig(config, standardizeKey);
 }
 
 // src/valibotIssues.ts
@@ -83,9 +83,10 @@ function formatValiIssues(issues) {
       messages.push(`${fmt.dotPath}: ${fmt.message}`);
     }
   }
-  return messages.join("\n");
+  return messages.join(`
+`);
 }
-var formatValiIssue = function(issue) {
+function formatValiIssue(issue) {
   const dotPath = issue.path?.map((item) => item.key).join(".") ?? "";
   if (Array.isArray(issue.issues) && issue.issues.length > 0) {
     const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
@@ -94,13 +95,57 @@ var formatValiIssue = function(issue) {
   }
   const message = `${issue.message} (value: ${JSON.stringify(issue.input)})`;
   return { dotPath, message };
-};
+}
 
 // src/icon.ts
+var r = new RegExp("^(" + emojiRegex().source + ")$");
 function isSingleEmoji(string2) {
   return r.test(string2);
 }
-var renderModifier = function(key, value) {
+var IntegerFromString = v.union([
+  v.number([v.safeInteger()]),
+  v.transform(v.string(), (x) => Number(x), [v.safeInteger()])
+]);
+var BooleanFromString = v.union([
+  v.boolean(),
+  v.transform(v.string(), (x) => x === "" || x === "1")
+]);
+var SHAPE_NAMES = ["search", "circle", "square"];
+var ICON_PARAM_DEFAULTS = {
+  "preserve color": undefined,
+  "preserve aspect": undefined,
+  shape: undefined,
+  filled: false,
+  strike: false,
+  monospaced: false,
+  "flip x": false,
+  "flip y": false,
+  "move x": 0,
+  "move y": 0,
+  scale: 100,
+  rotate: 0
+};
+var IconModifiersSchema = v.object({
+  "preserve color": v.optional(BooleanFromString),
+  "preserve aspect": v.optional(BooleanFromString),
+  shape: v.optional(v.picklist(SHAPE_NAMES)),
+  filled: v.optional(BooleanFromString),
+  strike: v.optional(BooleanFromString),
+  monospaced: v.optional(BooleanFromString),
+  "flip x": v.optional(BooleanFromString),
+  "flip y": v.optional(BooleanFromString),
+  "move x": v.optional(IntegerFromString),
+  "move y": v.optional(IntegerFromString),
+  scale: v.optional(IntegerFromString),
+  rotate: v.optional(IntegerFromString)
+});
+var defaultModifierValues = new Map(Object.entries(ICON_PARAM_DEFAULTS));
+var IconComponentsSchema = v.object({
+  prefix: v.string(),
+  payload: v.string(),
+  modifiers: v.object({}, v.unknown())
+});
+function renderModifier(key, value) {
   key = kebabCase(key);
   if (key === "shape" && typeof value === "string") {
     return SHAPE_NAMES.includes(value) ? value : "";
@@ -112,7 +157,7 @@ var renderModifier = function(key, value) {
   if (typeof value === "string")
     return `${key}=${value}`;
   return "";
-};
+}
 function descriptorStringFromComponents(components) {
   const { prefix, payload, modifiers } = components;
   const modifierString = Object.entries(modifiers).map(([key, value]) => renderModifier(key, value)).filter((x) => x.length > 0).join(" ");
@@ -147,7 +192,7 @@ function standardizeIcon(specifier, extraParams) {
   parsed.result.modifiers = validated.output;
   return parsed;
 }
-var parseDescriptorString = function(string2) {
+function parseDescriptorString(string2) {
   string2 = string2.trim();
   {
     const components2 = string2.match(/^(?:text:)?\[\[(.{1,3})\]\]$/);
@@ -204,8 +249,8 @@ var parseDescriptorString = function(string2) {
       modifiers
     }
   };
-};
-var parseModifierString = function(modifiers) {
+}
+function parseModifierString(modifiers) {
   const result = {};
   if (modifiers.length > 0) {
     for (const str of modifiers.split(" ")) {
@@ -217,58 +262,15 @@ var parseModifierString = function(modifiers) {
     }
   }
   return result;
-};
-var r = new RegExp("^(" + emojiRegex().source + ")$");
-var IntegerFromString = v.union([
-  v.number([v.safeInteger()]),
-  v.transform(v.string(), (x) => Number(x), [v.safeInteger()])
-]);
-var BooleanFromString = v.union([
-  v.boolean(),
-  v.transform(v.string(), (x) => x === "" || x === "1")
-]);
-var SHAPE_NAMES = ["search", "circle", "square"];
-var ICON_PARAM_DEFAULTS = {
-  "preserve color": undefined,
-  "preserve aspect": undefined,
-  shape: undefined,
-  filled: false,
-  strike: false,
-  monospaced: false,
-  "flip x": false,
-  "flip y": false,
-  "move x": 0,
-  "move y": 0,
-  scale: 100,
-  rotate: 0
-};
-var IconModifiersSchema = v.object({
-  "preserve color": v.optional(BooleanFromString),
-  "preserve aspect": v.optional(BooleanFromString),
-  shape: v.optional(v.picklist(SHAPE_NAMES)),
-  filled: v.optional(BooleanFromString),
-  strike: v.optional(BooleanFromString),
-  monospaced: v.optional(BooleanFromString),
-  "flip x": v.optional(BooleanFromString),
-  "flip y": v.optional(BooleanFromString),
-  "move x": v.optional(IntegerFromString),
-  "move y": v.optional(IntegerFromString),
-  scale: v.optional(IntegerFromString),
-  rotate: v.optional(IntegerFromString)
-});
-var defaultModifierValues = new Map(Object.entries(ICON_PARAM_DEFAULTS));
-var IconComponentsSchema = v.object({
-  prefix: v.string(),
-  payload: v.string(),
-  modifiers: v.object({}, v.unknown())
-});
+}
 // src/loader.ts
-import {array, object as object2, parse as parse2, string as string2} from "valibot";
+import { array, object as object2, parse as parse2, string as string2 } from "valibot";
 
 // src/parsers.ts
-import {parse as parsePlist} from "fast-plist";
-import {JSON_SCHEMA, load as parseYaml} from "js-yaml";
-import {ValiError, parse, record, unknown as unknown2} from "valibot";
+import { parse as parsePlist } from "fast-plist";
+import { JSON_SCHEMA, load as parseYaml } from "js-yaml";
+import { ValiError, parse, record, unknown as unknown2 } from "valibot";
+var VConfigObject = record(unknown2());
 function parsePlistObject(plist) {
   try {
     return parse(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
@@ -308,13 +310,12 @@ function parseYamlObject(yamlSource) {
     throw new Error("Invalid YAML");
   }
 }
-var VConfigObject = record(unknown2());
 
 // src/snippet.ts
 function lines(string2) {
   return string2.split(/\r\n|\n|\r/);
 }
-var extractPrefixedBlock = function(string2, prefix) {
+function extractPrefixedBlock(string2, prefix) {
   const result = [];
   for (const line of lines(string2)) {
     if (line !== "" && (prefix === "" || line.startsWith(prefix))) {
@@ -323,9 +324,10 @@ var extractPrefixedBlock = function(string2, prefix) {
       break;
     }
   }
-  return result.join("\n");
-};
-var candidateYaml = function(string2) {
+  return result.join(`
+`);
+}
+function candidateYaml(string2) {
   const components = string2.match(/([^\n]*)# ?popclip.+$/is);
   if (components?.length !== 2) {
     return null;
@@ -335,10 +337,10 @@ var candidateYaml = function(string2) {
     return null;
   }
   return candidateYaml2.replace(/\u00A0/g, " ").trim();
-};
-var embedTypeFromText = function(text, yaml, config2) {
-  let result = EmbedType.Unknown;
-  let { module, language, interpreter } = config2;
+}
+function embedTypeFromText(text, yaml, config) {
+  let result = "unknown" /* Unknown */;
+  let { module, language, interpreter } = config;
   if (typeof module === "string") {
     throw new Error("In a snippet, 'module' must be a boolean");
   }
@@ -352,29 +354,29 @@ var embedTypeFromText = function(text, yaml, config2) {
   if (hasAdditionalContent) {
     if (language === "javascript") {
       if (module) {
-        result = EmbedType.JavaScriptModule;
+        result = "javascript module" /* JavaScriptModule */;
       } else {
-        result = EmbedType.JavaScript;
+        result = "javascript" /* JavaScript */;
       }
     } else if (language === "typescript") {
       if (module) {
-        result = EmbedType.TypeScriptModule;
+        result = "typescript module" /* TypeScriptModule */;
       } else {
-        result = EmbedType.TypeScript;
+        result = "typescript" /* TypeScript */;
       }
     } else if (language === "applescript") {
-      result = EmbedType.AppleScript;
+      result = "applescript" /* AppleScript */;
     } else if (interpreter.length > 0) {
-      result = EmbedType.ShellScript;
+      result = "shell script" /* ShellScript */;
     } else if (text.startsWith("#!")) {
-      result = EmbedType.ExecutableShellScript;
+      result = "executable shell script" /* ExecutableShellScript */;
     }
   } else {
-    result = EmbedType.Yaml;
+    result = "yaml" /* Yaml */;
   }
   return result;
-};
-var hasTabsInBlock = function(yamlSource) {
+}
+function hasTabsInBlock(yamlSource) {
   for (const line of lines(yamlSource)) {
     const parts = line.split("{");
     if (parts[0].includes("\t"))
@@ -383,10 +385,10 @@ var hasTabsInBlock = function(yamlSource) {
       break;
   }
   return false;
-};
-var forceString = function(val) {
+}
+function forceString(val) {
   return typeof val === "string" ? val : "";
-};
+}
 function configFromText(text, externalSuffix = "") {
   const yaml = candidateYaml(text);
   if (yaml === null) {
@@ -395,89 +397,89 @@ function configFromText(text, externalSuffix = "") {
   if (hasTabsInBlock(yaml)) {
     throw new Error("Don't use tabs in YAML");
   }
-  const config2 = standardizeConfig(parseYamlObject(yaml));
-  const embedType = embedTypeFromText(text, yaml, config2);
+  const config = standardizeConfig(parseYamlObject(yaml));
+  const embedType = embedTypeFromText(text, yaml, config);
   let suffix = forceString(suffixForEmbedType(embedType));
   suffix ||= forceString(externalSuffix);
-  suffix ||= forceString(config2["suffix"]);
+  suffix ||= forceString(config["suffix"]);
   log("suffix", suffix);
   const fileName = suffix ? `Config.${suffix}` : "Config";
   const isExecutable = isExecutableForEmbedType(embedType);
-  return { config: config2, embedType, fileName, isExecutable };
+  return { config, embedType, fileName, isExecutable };
 }
-var suffixForEmbedType = function(embedType) {
+function suffixForEmbedType(embedType) {
   switch (embedType) {
-    case EmbedType.Yaml:
+    case "yaml" /* Yaml */:
       return "yaml";
-    case EmbedType.JavaScript:
-    case EmbedType.JavaScriptModule:
+    case "javascript" /* JavaScript */:
+    case "javascript module" /* JavaScriptModule */:
       return "js";
-    case EmbedType.TypeScript:
-    case EmbedType.TypeScriptModule:
+    case "typescript" /* TypeScript */:
+    case "typescript module" /* TypeScriptModule */:
       return "ts";
-    case EmbedType.AppleScript:
+    case "applescript" /* AppleScript */:
       return "applescript";
     default:
       return null;
   }
-};
-var isExecutableForEmbedType = function(embedType) {
+}
+function isExecutableForEmbedType(embedType) {
   switch (embedType) {
-    case EmbedType.ExecutableShellScript:
+    case "executable shell script" /* ExecutableShellScript */:
       return true;
     default:
       return false;
   }
-};
-var selfReferenceFieldNameForEmbedType = function(embedType) {
+}
+function selfReferenceFieldNameForEmbedType(embedType) {
   switch (embedType) {
-    case EmbedType.ShellScript:
-    case EmbedType.ExecutableShellScript:
+    case "shell script" /* ShellScript */:
+    case "executable shell script" /* ExecutableShellScript */:
       return "shell script file";
-    case EmbedType.JavaScript:
-    case EmbedType.TypeScript:
+    case "javascript" /* JavaScript */:
+    case "typescript" /* TypeScript */:
       return "javascript file";
-    case EmbedType.AppleScript:
+    case "applescript" /* AppleScript */:
       return "applescript file";
-    case EmbedType.JavaScriptModule:
-    case EmbedType.TypeScriptModule:
+    case "javascript module" /* JavaScriptModule */:
+    case "typescript module" /* TypeScriptModule */:
       return "module";
-    case EmbedType.Yaml:
-    case EmbedType.Unknown:
+    case "yaml" /* Yaml */:
+    case "unknown" /* Unknown */:
     default:
       return null;
   }
-};
+}
 function loadSnippet(text, fileName) {
   try {
-    const { config: config2, embedType } = configFromText(text) ?? {
+    const { config, embedType } = configFromText(text) ?? {
       config: {},
-      embedType: EmbedType.Unknown
+      embedType: "unknown" /* Unknown */
     };
     const fieldName = selfReferenceFieldNameForEmbedType(embedType);
     if (fieldName) {
-      config2[fieldName] = fileName;
+      config[fieldName] = fileName;
     }
-    return config2;
+    return config;
   } catch (error) {
     const msg = error instanceof Error && error.message ? error.message : "Invalid snippet";
     throw new Error(msg);
   }
 }
-var EmbedType;
-(function(EmbedType2) {
-  EmbedType2["Unknown"] = "unknown";
-  EmbedType2["Yaml"] = "yaml";
-  EmbedType2["ShellScript"] = "shell script";
-  EmbedType2["ExecutableShellScript"] = "executable shell script";
-  EmbedType2["AppleScript"] = "applescript";
-  EmbedType2["JavaScript"] = "javascript";
-  EmbedType2["TypeScript"] = "typescript";
-  EmbedType2["JavaScriptModule"] = "javascript module";
-  EmbedType2["TypeScriptModule"] = "typescript module";
-})(EmbedType || (EmbedType = {}));
 
 // src/loader.ts
+var VConfigFiles = array(object2({
+  name: string2(),
+  contents: string2()
+}));
+var plistConfigFileName = "Config.plist";
+var jsonConfigFileName = "Config.json";
+var yamlConfigFileName = "Config.yaml";
+var configFileNames = [
+  plistConfigFileName,
+  jsonConfigFileName,
+  yamlConfigFileName
+];
 function loadStaticConfig(obj) {
   const configFiles = parse2(VConfigFiles, obj);
   const result = {};
@@ -511,63 +513,40 @@ function loadStaticConfig(obj) {
   }
   return result;
 }
-var VConfigFiles = array(object2({
-  name: string2(),
-  contents: string2()
-}));
-var plistConfigFileName = "Config.plist";
-var jsonConfigFileName = "Config.json";
-var yamlConfigFileName = "Config.yaml";
-var configFileNames = [
-  plistConfigFileName,
-  jsonConfigFileName,
-  yamlConfigFileName
-];
 // src/summary.ts
 import {
-array as array3,
-object as object4,
-optional as optional3,
-parse as parse4,
-picklist as picklist2
+  array as array3,
+  object as object4,
+  optional as optional3,
+  parse as parse4,
+  picklist as picklist2
 } from "valibot";
 
 // src/validate.ts
 import {
-ValiError as ValiError2,
-array as array2,
-boolean as boolean2,
-custom,
-intersect,
-literal,
-maxLength,
-maxValue,
-merge,
-minLength,
-minValue,
-nonOptional,
-null_,
-number as number2,
-object as object3,
-optional as optional2,
-parse as parse3,
-record as record2,
-regex,
-safeInteger as safeInteger2,
-string as string3,
-union as union2
+  ValiError as ValiError2,
+  array as array2,
+  boolean as boolean2,
+  custom,
+  intersect,
+  literal,
+  maxLength,
+  maxValue,
+  merge,
+  minLength,
+  minValue,
+  nonOptional,
+  null_,
+  number as number2,
+  object as object3,
+  optional as optional2,
+  parse as parse3,
+  record as record2,
+  regex,
+  safeInteger as safeInteger2,
+  string as string3,
+  union as union2
 } from "valibot";
-function validateStaticConfig(config2) {
-  try {
-    return parse3(ExtensionSchema, config2);
-  } catch (error) {
-    if (error instanceof ValiError2) {
-      throw new Error(formatValiIssues(error.issues));
-    }
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    throw new Error(`Invalid base config: ${msg}`);
-  }
-}
 var SaneStringSchema = string3([minLength(1), maxLength(500)]);
 var SaneStringAllowingEmptySchema = string3([maxLength(500)]);
 var LongStringSchema = string3([minLength(1), maxLength(1e4)]);
@@ -722,66 +701,19 @@ var ExtensionSchema = merge([
   ActionSchema,
   MetadataSchema
 ]);
+function validateStaticConfig(config) {
+  try {
+    return parse3(ExtensionSchema, config);
+  } catch (error) {
+    if (error instanceof ValiError2) {
+      throw new Error(formatValiIssues(error.issues));
+    }
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Invalid base config: ${msg}`);
+  }
+}
 
 // src/summary.ts
-var normalizeLocalizedString = function(ls) {
-  return typeof ls === "object" && Object.entries(ls).length === 1 ? ls.en : ls;
-};
-function extractSummary(config2) {
-  const actions = config2.actions ? config2.actions : config2.action ? [config2.action] : [];
-  const icon3 = (() => {
-    let parsedIcon;
-    for (const obj of [config2, ...actions]) {
-      if (obj.icon) {
-        parsedIcon = standardizeIcon(obj.icon, obj);
-        break;
-      }
-    }
-    if (parsedIcon?.ok) {
-      return parsedIcon.result;
-    }
-    return;
-  })();
-  const actionTypesSet = new Set;
-  if (config2.module) {
-    actionTypesSet.add("javascript");
-  } else {
-    for (const action of [...actions, config2]) {
-      for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
-        if (keys.some((key) => action.hasOwnProperty(key))) {
-          actionTypesSet.add(type);
-          break;
-        }
-      }
-    }
-  }
-  if (actionTypesSet.size === 0 && actions.length > 0) {
-    actionTypesSet.add("none");
-  }
-  const actionTypes = Array.from(actionTypesSet);
-  const apps = [];
-  for (const obj of [config2, ...actions]) {
-    if (obj.apps) {
-      for (const app of obj.apps) {
-        apps.push({ name: app.name, link: app.link });
-      }
-    } else if (obj.app) {
-      apps.push({ name: obj.app.name, link: obj.app.link });
-    }
-  }
-  return parse4(ExtensionsSummarySchema, {
-    name: normalizeLocalizedString(config2.name),
-    actionTypes,
-    identifier: config2.identifier,
-    description: normalizeLocalizedString(config2.description),
-    keywords: config2.keywords,
-    icon: icon3,
-    entitlements: config2.entitlements?.length ? config2.entitlements : undefined,
-    apps: apps.length ? apps : undefined,
-    macosVersion: config2["macos version"],
-    popclipVersion: config2["popclip version"]
-  });
-}
 var SENTINEL_KEYS = {
   service: ["service name"],
   url: ["url"],
@@ -805,6 +737,64 @@ var ExtensionsSummarySchema = object4({
   macosVersion: optional3(SaneStringSchema),
   popclipVersion: optional3(VersionNumberSchema)
 });
+function normalizeLocalizedString(ls) {
+  return typeof ls === "object" && Object.entries(ls).length === 1 ? ls.en : ls;
+}
+function extractSummary(config) {
+  const actions = config.actions ? config.actions : config.action ? [config.action] : [];
+  const icon = (() => {
+    let parsedIcon;
+    for (const obj of [config, ...actions]) {
+      if (obj.icon) {
+        parsedIcon = standardizeIcon(obj.icon, obj);
+        break;
+      }
+    }
+    if (parsedIcon?.ok) {
+      return parsedIcon.result;
+    }
+    return;
+  })();
+  const actionTypesSet = new Set;
+  if (config.module) {
+    actionTypesSet.add("javascript");
+  } else {
+    for (const action of [...actions, config]) {
+      for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
+        if (keys.some((key) => action.hasOwnProperty(key))) {
+          actionTypesSet.add(type);
+          break;
+        }
+      }
+    }
+  }
+  if (actionTypesSet.size === 0 && actions.length > 0) {
+    actionTypesSet.add("none");
+  }
+  const actionTypes = Array.from(actionTypesSet);
+  const apps = [];
+  for (const obj of [config, ...actions]) {
+    if (obj.apps) {
+      for (const app of obj.apps) {
+        apps.push({ name: app.name, link: app.link });
+      }
+    } else if (obj.app) {
+      apps.push({ name: obj.app.name, link: obj.app.link });
+    }
+  }
+  return parse4(ExtensionsSummarySchema, {
+    name: normalizeLocalizedString(config.name),
+    actionTypes,
+    identifier: config.identifier,
+    description: normalizeLocalizedString(config.description),
+    keywords: config.keywords,
+    icon,
+    entitlements: config.entitlements?.length ? config.entitlements : undefined,
+    apps: apps.length ? apps : undefined,
+    macosVersion: config["macos version"],
+    popclipVersion: config["popclip version"]
+  });
+}
 export {
   validateStaticConfig,
   standardizeKey,
