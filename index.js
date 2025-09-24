@@ -102,7 +102,7 @@ function formatValiIssue(issue) {
 }
 
 // src/icon.ts
-var r = new RegExp("^(" + emojiRegex().source + ")$");
+var r = new RegExp(`^(${emojiRegex().source})$`);
 function isSingleEmoji(string2) {
   return r.test(string2);
 }
@@ -405,7 +405,7 @@ function configFromText(text, externalSuffix = "") {
   const embedType = embedTypeFromText(text, yaml, config);
   let suffix = forceString(suffixForEmbedType(embedType));
   suffix ||= forceString(externalSuffix);
-  suffix ||= forceString(config["suffix"]);
+  suffix ||= forceString(config.suffix);
   log("suffix", suffix);
   const fileName = suffix ? `Config.${suffix}` : "Config";
   const isExecutable = isExecutableForEmbedType(embedType);
@@ -448,8 +448,6 @@ function selfReferenceFieldNameForEmbedType(embedType) {
     case "javascript module" /* JavaScriptModule */:
     case "typescript module" /* TypeScriptModule */:
       return "module";
-    case "yaml" /* Yaml */:
-    case "unknown" /* Unknown */:
     default:
       return null;
   }
@@ -705,17 +703,14 @@ function normalizeLocalizedString(ls) {
 function extractSummary(config) {
   const actions = config.actions ? config.actions : config.action ? [config.action] : [];
   const icon = (() => {
-    let parsedIcon;
     for (const obj of [config, ...actions]) {
       if (obj.icon) {
-        parsedIcon = standardizeIcon(obj.icon, obj);
-        break;
+        const parsedIcon = standardizeIcon(obj.icon, obj);
+        if (parsedIcon.ok) {
+          return parsedIcon.result;
+        }
       }
     }
-    if (parsedIcon?.ok) {
-      return parsedIcon.result;
-    }
-    return;
   })();
   const actionTypesSet = new Set;
   if (config.module) {
