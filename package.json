@@ -9,6 +9,7 @@
     "watch": "bun run build --watch"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.2.4",
     "@types/js-yaml": "4.0.9",
     "axios": "1.6.8",
     "bun-types": "latest",

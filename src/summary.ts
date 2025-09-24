@@ -51,17 +51,14 @@ export function extractSummary(config: v.InferOutput<typeof ExtensionSchema>) {
 
   // extract icon
   const icon = (() => {
-    let parsedIcon;
     for (const obj of [config, ...actions]) {
       if (obj.icon) {
-        parsedIcon = standardizeIcon(obj.icon, obj);
-        break;
+        const parsedIcon = standardizeIcon(obj.icon, obj);
+        if (parsedIcon.ok) {
+          return parsedIcon.result;
+        }
       }
     }
-    if (parsedIcon?.ok) {
-      return parsedIcon.result;
-    }
-    return undefined;
   })();
 
   // extract action types

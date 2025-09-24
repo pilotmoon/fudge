@@ -7,7 +7,7 @@ import { standardizeConfig, standardizeKey } from "./std.js";
 import { formatValiIssues } from "./valibotIssues.js";
 
 // Emoji detector utilty
-const r = new RegExp("^(" + emojiRegex().source + ")$");
+const r = new RegExp(`^(${emojiRegex().source})$`);
 export function isSingleEmoji(string: string) {
   return r.test(string);
 }
@@ -95,7 +95,24 @@ export function descriptorStringFromComponents(
   return `${modifierString} ${prefix}:${payload}`.trim();
 }
 
-export function standardizeIcon(specifier: string, extraParams: unknown) {
+export type StandardizedIcon =
+  | {
+      ok: true;
+      result: {
+        prefix: string;
+        payload: string;
+        modifiers: Record<string, unknown>;
+      };
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+export function standardizeIcon(
+  specifier: string,
+  extraParams: unknown,
+): StandardizedIcon {
   const parsed = parseDescriptorString(specifier);
   if (!parsed.ok) {
     return parsed;
@@ -123,7 +140,7 @@ export function standardizeIcon(specifier: string, extraParams: unknown) {
   // remove default values
   for (const [key, value] of Object.entries(validated.output)) {
     if (value === defaultModifierValues.get(key)) {
-      delete (validated.output as any)[key];
+      delete validated.output[key as keyof typeof validated.output];
     }
   }
 
@@ -134,7 +151,7 @@ export function standardizeIcon(specifier: string, extraParams: unknown) {
 /*****************************************************************************/
 // Internal parsing guts
 
-function parseDescriptorString(string: string) {
+function parseDescriptorString(string: string): StandardizedIcon {
   string = string.trim();
   {
     // old extensions shim (Uppercase, Lowercase, Sentence Case, Capitalize)

@@ -1,6 +1,4 @@
 declare global {
-  // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
-  // biome-ignore lint/style/noVar: go away
   var console: Console;
   // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
   function print(...args: any[]): void;

@@ -42,7 +42,7 @@ export function loadStaticConfig(
 
   // load the configs in order
   for (const cfg of configFiles) {
-    let thisConfig;
+    let thisConfig: Config;
     if (cfg.name === plistConfigFileName) {
       thisConfig = standardizeConfig(parsePlistObject(cfg.contents));
     } else if (cfg.name === jsonConfigFileName) {

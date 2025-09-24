@@ -122,7 +122,7 @@ export function configFromText(text: string, externalSuffix = "") {
   const embedType = embedTypeFromText(text, yaml, config);
   let suffix = forceString(suffixForEmbedType(embedType));
   suffix ||= forceString(externalSuffix);
-  suffix ||= forceString(config["suffix"]);
+  suffix ||= forceString(config.suffix);
   log("suffix", suffix);
   const fileName = suffix ? `Config.${suffix}` : "Config";
   const isExecutable = isExecutableForEmbedType(embedType);
@@ -168,8 +168,6 @@ function selfReferenceFieldNameForEmbedType(embedType: EmbedType) {
     case EmbedType.JavaScriptModule:
     case EmbedType.TypeScriptModule:
       return "module";
-    case EmbedType.Yaml:
-    case EmbedType.Unknown:
     default:
       return null;
   }

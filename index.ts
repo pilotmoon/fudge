@@ -1,4 +1,4 @@
-export { type Config } from "./src/config.js";
+export type { Config } from "./src/config.js";
 export {
   descriptorStringFromComponents,
   isSingleEmoji,

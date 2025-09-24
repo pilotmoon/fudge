@@ -1,6 +1,8 @@
 import { standardizeIcon } from "./src/icon.js";
-const sy = require("fast-stable-stringify");
-import axios from "axios";
+
+// const _sy = require("fast-stable-stringify");
+
+// import axios from "axios";
 
 const testData = [
   {
@@ -95,39 +97,40 @@ const testData = [
   },
 ];
 
-async function parseRemotely(specifier: string, extraParams: unknown) {
-  function querify(val: unknown) {
-    if (typeof val === "boolean") {
-      return val ? "1" : "0";
-    } else if (typeof val === "number") {
-      return val.toString();
-    } else if (typeof val === "string") {
-      return val;
-    } else {
-      return "unk";
-    }
-  }
+// async function _parseRemotely(specifier: string, extraParams: unknown) {
+//   function querify(val: unknown) {
+//     if (typeof val === "boolean") {
+//       return val ? "1" : "0";
+//     }
+//     if (typeof val === "number") {
+//       return val.toString();
+//     }
+//     if (typeof val === "string") {
+//       return val;
+//     }
+//     return "unk";
+//   }
 
-  // fetch e.g. http://localhost:58906/icon?format=json&specifier=ABC&square=1&flip-x=1
-  const params: Record<string, string> = {
-    format: "json",
-    specifier,
-  };
-  for (const [key, value] of Object.entries(extraParams ?? {})) {
-    params[key] = querify(value);
-  }
-  try {
-    const { data } = await axios.get("http://127.0.0.1:58906/icon", {
-      params,
-      paramsSerializer: {
-        encode: (param) => encodeURIComponent(param),
-      },
-    });
-    return data;
-  } catch (err) {
-    return { error: (err as any).response?.data };
-  }
-}
+//   // fetch e.g. http://localhost:58906/icon?format=json&specifier=ABC&square=1&flip-x=1
+//   const params: Record<string, string> = {
+//     format: "json",
+//     specifier,
+//   };
+//   for (const [key, value] of Object.entries(extraParams ?? {})) {
+//     params[key] = querify(value);
+//   }
+//   try {
+//     const { data } = await axios.get("http://127.0.0.1:58906/icon", {
+//       params,
+//       paramsSerializer: {
+//         encode: (param) => encodeURIComponent(param),
+//       },
+//     });
+//     return data;
+//   } catch (err) {
+//     return { error: (err as any).response?.data };
+//   }
+// }
 
 console.log("standardizeIcon");
 let count = 0;
