@@ -2,6 +2,19 @@ import * as v from "valibot";
 import { IconModifiersSchema } from "./icon";
 import { formatValiIssues } from "./valibotIssues";
 
+// from: https://github.com/fabian-hiller/valibot/issues/1034#issuecomment-3014696893
+function required<TSchema extends v.GenericSchema<unknown>>(
+  schema: TSchema,
+  message?: v.ErrorMessage<v.InferIssue<TSchema>>,
+) {
+  const outputSchema = v.pipe(
+    v.optional(schema, () => undefined),
+    v.nonOptional(schema, message),
+    schema,
+  );
+  return outputSchema;
+}
+
 /***********************************************************
   Schemas
 ***********************************************************/
@@ -16,7 +29,7 @@ const LongStringSchema = v.pipe(v.string(), v.minLength(1), v.maxLength(10000));
 const StringTableSchema = v.intersect([
   v.record(SaneStringSchema, SaneStringSchema),
   v.object({
-    en: v.nonOptional(SaneStringSchema, "An 'en' string is required"),
+    en: required(SaneStringSchema, "An 'en' string is required"),
   }),
 ]);
 
@@ -49,16 +62,16 @@ const VersionStringSchema = v.pipe(
 const IconSchema = v.union([LongStringSchema, v.null_(), v.literal(false)]);
 
 export const AppSchema = v.object({
-  name: v.nonOptional(SaneStringSchema, "App name is required"),
-  link: v.nonOptional(SaneStringSchema, "App link is required"),
+  name: required(SaneStringSchema, "App name is required"),
+  link: required(SaneStringSchema, "App link is required"),
   "check installed": v.optional(v.boolean()),
   "bundle identifier": v.optional(SaneStringSchema),
   "bundle identifiers": v.optional(v.array(SaneStringSchema)),
 });
 
 const OptionSchema = v.object({
-  identifier: v.nonOptional(IdentifierSchema, "Option identifier is required"),
-  type: v.nonOptional(SaneStringSchema, "Option type is required"),
+  identifier: required(IdentifierSchema, "Option identifier is required"),
+  type: required(SaneStringSchema, "Option type is required"),
   label: v.optional(LocalizableStringSchema),
   description: v.optional(LocalizableStringSchema),
   values: v.optional(v.array(SaneStringAllowingEmptySchema)),
@@ -88,7 +101,7 @@ const KeyComboSchema = v.union([
       "key char": v.optional(
         v.pipe(v.string(), v.minLength(1), v.maxLength(1)),
       ),
-      modifiers: v.nonOptional(
+      modifiers: required(
         v.pipe(v.number(), v.safeInteger(), v.minValue(0)),
         "'modifiers' is required",
       ),
@@ -148,7 +161,7 @@ const AppleScriptActionSchema = v.object({
   "applescript call": v.optional(
     v.object({
       file: v.optional(SaneStringSchema),
-      handler: v.nonOptional(SaneStringSchema, "Handler name is required"),
+      handler: required(SaneStringSchema, "Handler name is required"),
       parameters: v.optional(v.array(SaneStringSchema)),
     }),
   ),
@@ -180,7 +193,7 @@ export const ActionSchema = v.object({
 });
 
 const ExtensionCoreSchema = v.object({
-  name: v.nonOptional(LocalizableStringSchema, "A name is required"),
+  name: required(LocalizableStringSchema, "A name is required"),
   icon: v.optional(IconSchema),
   identifier: v.optional(IdentifierSchema),
   "popclip version": v.optional(VersionNumberSchema),

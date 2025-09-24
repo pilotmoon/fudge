@@ -520,13 +520,19 @@ import * as v6 from "valibot";
 
 // src/validate.ts
 import * as v5 from "valibot";
+function required(schema, message) {
+  const outputSchema = v5.pipe(v5.optional(schema, () => {
+    return;
+  }), v5.nonOptional(schema, message), schema);
+  return outputSchema;
+}
 var SaneStringSchema = v5.pipe(v5.string(), v5.minLength(1), v5.maxLength(500));
 var SaneStringAllowingEmptySchema = v5.pipe(v5.string(), v5.maxLength(500));
 var LongStringSchema = v5.pipe(v5.string(), v5.minLength(1), v5.maxLength(1e4));
 var StringTableSchema = v5.intersect([
   v5.record(SaneStringSchema, SaneStringSchema),
   v5.object({
-    en: v5.nonOptional(SaneStringSchema, "An 'en' string is required")
+    en: required(SaneStringSchema, "An 'en' string is required")
   })
 ]);
 var LocalizableStringSchema = v5.union([
@@ -538,15 +544,15 @@ var VersionNumberSchema = v5.pipe(v5.number("Must be a number"), v5.safeInteger(
 var VersionStringSchema = v5.pipe(v5.string("Must be a string"), v5.regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, "Bad format"));
 var IconSchema = v5.union([LongStringSchema, v5.null_(), v5.literal(false)]);
 var AppSchema = v5.object({
-  name: v5.nonOptional(SaneStringSchema, "App name is required"),
-  link: v5.nonOptional(SaneStringSchema, "App link is required"),
+  name: required(SaneStringSchema, "App name is required"),
+  link: required(SaneStringSchema, "App link is required"),
   "check installed": v5.optional(v5.boolean()),
   "bundle identifier": v5.optional(SaneStringSchema),
   "bundle identifiers": v5.optional(v5.array(SaneStringSchema))
 });
 var OptionSchema = v5.object({
-  identifier: v5.nonOptional(IdentifierSchema, "Option identifier is required"),
-  type: v5.nonOptional(SaneStringSchema, "Option type is required"),
+  identifier: required(IdentifierSchema, "Option identifier is required"),
+  type: required(SaneStringSchema, "Option type is required"),
   label: v5.optional(LocalizableStringSchema),
   description: v5.optional(LocalizableStringSchema),
   values: v5.optional(v5.array(SaneStringAllowingEmptySchema)),
@@ -564,7 +570,7 @@ var KeyComboSchema = v5.union([
   v5.pipe(v5.object({
     "key code": v5.optional(KeyCodeSchema),
     "key char": v5.optional(v5.pipe(v5.string(), v5.minLength(1), v5.maxLength(1))),
-    modifiers: v5.nonOptional(v5.pipe(v5.number(), v5.safeInteger(), v5.minValue(0)), "'modifiers' is required")
+    modifiers: required(v5.pipe(v5.number(), v5.safeInteger(), v5.minValue(0)), "'modifiers' is required")
   }), v5.check((obj) => {
     const hasKeyCode = obj["key code"] !== undefined;
     const hasKeyChar = obj["key char"] !== undefined;
@@ -611,7 +617,7 @@ var AppleScriptActionSchema = v5.object({
   "applescript file": v5.optional(SaneStringSchema),
   "applescript call": v5.optional(v5.object({
     file: v5.optional(SaneStringSchema),
-    handler: v5.nonOptional(SaneStringSchema, "Handler name is required"),
+    handler: required(SaneStringSchema, "Handler name is required"),
     parameters: v5.optional(v5.array(SaneStringSchema))
   }))
 });
@@ -638,7 +644,7 @@ var ActionSchema = v5.object({
   ...JavaScriptActionSchema.entries
 });
 var ExtensionCoreSchema = v5.object({
-  name: v5.nonOptional(LocalizableStringSchema, "A name is required"),
+  name: required(LocalizableStringSchema, "A name is required"),
   icon: v5.optional(IconSchema),
   identifier: v5.optional(IdentifierSchema),
   "popclip version": v5.optional(VersionNumberSchema),
