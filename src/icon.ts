@@ -1,7 +1,7 @@
 import { kebabCase } from "case-anything";
 import emojiRegex from "emoji-regex";
 import * as v from "valibot";
-import { Config } from "./config.js";
+import type { Config } from "./config.js";
 import { log } from "./log.js";
 import { standardizeConfig, standardizeKey } from "./std.js";
 import { formatValiIssues } from "./valibotIssues.js";
@@ -13,13 +13,20 @@ export function isSingleEmoji(string: string) {
 }
 
 const IntegerFromString = v.union([
-  v.number([v.safeInteger()]),
-  v.transform(v.string(), (x) => Number(x), [v.safeInteger()]),
+  v.pipe(v.number(), v.safeInteger()),
+  v.pipe(
+    v.string(),
+    v.transform((x) => Number(x)),
+    v.safeInteger(),
+  ),
 ]);
 
 const BooleanFromString = v.union([
   v.boolean(),
-  v.transform(v.string(), (x) => x === "" || x === "1"),
+  v.pipe(
+    v.string(),
+    v.transform((x) => x === "" || x === "1"),
+  ),
 ]);
 
 // these are in reverse order of precedence
@@ -63,7 +70,7 @@ export const defaultModifierValues = new Map(
 export const IconComponentsSchema = v.object({
   prefix: v.string(),
   payload: v.string(),
-  modifiers: v.object({}, v.unknown()),
+  modifiers: v.looseObject({}),
 });
 
 function renderModifier(key: string, value: unknown) {
@@ -78,7 +85,7 @@ function renderModifier(key: string, value: unknown) {
 }
 
 export function descriptorStringFromComponents(
-  components: v.Output<typeof IconComponentsSchema>,
+  components: v.InferOutput<typeof IconComponentsSchema>,
 ) {
   const { prefix, payload, modifiers } = components;
   const modifierString = Object.entries(modifiers)

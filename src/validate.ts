@@ -1,235 +1,222 @@
-import {
-  ValiError,
-  array,
-  boolean,
-  custom,
-  intersect,
-  literal,
-  maxLength,
-  maxValue,
-  merge,
-  minLength,
-  minValue,
-  nonOptional,
-  null_,
-  number,
-  object,
-  optional,
-  parse,
-  record,
-  regex,
-  safeInteger,
-  string,
-  union,
-} from "valibot";
+import * as v from "valibot";
 import { IconModifiersSchema } from "./icon";
 import { formatValiIssues } from "./valibotIssues";
 
 /***********************************************************
   Schemas
 ***********************************************************/
-export const SaneStringSchema = string([minLength(1), maxLength(500)]);
-const SaneStringAllowingEmptySchema = string([maxLength(500)]);
-const LongStringSchema = string([minLength(1), maxLength(10000)]);
+export const SaneStringSchema = v.pipe(
+  v.string(),
+  v.minLength(1),
+  v.maxLength(500),
+);
+const SaneStringAllowingEmptySchema = v.pipe(v.string(), v.maxLength(500));
+const LongStringSchema = v.pipe(v.string(), v.minLength(1), v.maxLength(10000));
 
-const StringTableSchema = intersect([
-  record(SaneStringSchema, SaneStringSchema),
-  object({
-    en: nonOptional(SaneStringSchema, "An 'en' string is required"),
+const StringTableSchema = v.intersect([
+  v.record(SaneStringSchema, SaneStringSchema),
+  v.object({
+    en: v.nonOptional(SaneStringSchema, "An 'en' string is required"),
   }),
 ]);
 
-export const LocalizableStringSchema = union([
+export const LocalizableStringSchema = v.union([
   SaneStringSchema,
   StringTableSchema,
 ]);
 
-export const IdentifierSchema = string([
-  minLength(1),
-  maxLength(100),
-  regex(
+export const IdentifierSchema = v.pipe(
+  v.string(),
+  v.minLength(1),
+  v.maxLength(100),
+  v.regex(
     /^[a-z0-9]+([._-][a-z0-9]+)*$/i,
     "Invalid identifier (allowed: [a-zA-Z0-9]+, separated by [._-])",
   ),
-]);
+);
 
-export const VersionNumberSchema = number("Must be a number", [
-  safeInteger("Must be an integer"),
-  minValue(1),
-]);
+export const VersionNumberSchema = v.pipe(
+  v.number("Must be a number"),
+  v.safeInteger("Must be an integer"),
+  v.minValue(1),
+);
 
-const VersionStringSchema = string("Must be a string", [
-  regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, `Bad format`),
-]);
+const VersionStringSchema = v.pipe(
+  v.string("Must be a string"),
+  v.regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, "Bad format"),
+);
 
-const IconSchema = union([LongStringSchema, null_(), literal(false)]);
+const IconSchema = v.union([LongStringSchema, v.null_(), v.literal(false)]);
 
-export const AppSchema = object({
-  name: nonOptional(SaneStringSchema, "App name is required"),
-  link: nonOptional(SaneStringSchema, "App link is required"),
-  "check installed": optional(boolean()),
-  "bundle identifier": optional(SaneStringSchema),
-  "bundle identifiers": optional(array(SaneStringSchema)),
+export const AppSchema = v.object({
+  name: v.nonOptional(SaneStringSchema, "App name is required"),
+  link: v.nonOptional(SaneStringSchema, "App link is required"),
+  "check installed": v.optional(v.boolean()),
+  "bundle identifier": v.optional(SaneStringSchema),
+  "bundle identifiers": v.optional(v.array(SaneStringSchema)),
 });
 
-const OptionSchema = merge([
-  object({
-    identifier: nonOptional(IdentifierSchema, "Option identifier is required"),
-    type: nonOptional(SaneStringSchema, "Option type is required"),
-    label: optional(LocalizableStringSchema),
-    description: optional(LocalizableStringSchema),
-    values: optional(array(SaneStringAllowingEmptySchema)),
-    "value labels": optional(array(LocalizableStringSchema)),
-    "default value": optional(
-      union([SaneStringAllowingEmptySchema, boolean()]),
-    ),
-    hidden: optional(boolean()),
-    inset: optional(boolean()),
-    icon: optional(IconSchema),
-  }),
-  IconModifiersSchema,
-]);
+const OptionSchema = v.object({
+  identifier: v.nonOptional(IdentifierSchema, "Option identifier is required"),
+  type: v.nonOptional(SaneStringSchema, "Option type is required"),
+  label: v.optional(LocalizableStringSchema),
+  description: v.optional(LocalizableStringSchema),
+  values: v.optional(v.array(SaneStringAllowingEmptySchema)),
+  "value labels": v.optional(v.array(LocalizableStringSchema)),
+  "default value": v.optional(
+    v.union([SaneStringAllowingEmptySchema, v.boolean()]),
+  ),
+  hidden: v.optional(v.boolean()),
+  inset: v.optional(v.boolean()),
+  icon: v.optional(IconSchema),
+  ...IconModifiersSchema.entries,
+});
 
-const KeyCodeSchema = number([safeInteger(), minValue(0), maxValue(127)]);
+const KeyCodeSchema = v.pipe(
+  v.number(),
+  v.safeInteger(),
+  v.minValue(0),
+  v.maxValue(127),
+);
 
-const KeyComboSchema = union([
+const KeyComboSchema = v.union([
   KeyCodeSchema,
   SaneStringSchema,
-  object(
-    {
-      "key code": optional(KeyCodeSchema),
-      "key char": optional(string([minLength(1), maxLength(1)])),
-      modifiers: nonOptional(
-        number([safeInteger(), minValue(0)]),
+  v.pipe(
+    v.object({
+      "key code": v.optional(KeyCodeSchema),
+      "key char": v.optional(
+        v.pipe(v.string(), v.minLength(1), v.maxLength(1)),
+      ),
+      modifiers: v.nonOptional(
+        v.pipe(v.number(), v.safeInteger(), v.minValue(0)),
         "'modifiers' is required",
       ),
-    },
-    [
-      custom((obj) => {
-        const hasKeyCode = obj["key code"] !== undefined;
-        const hasKeyChar = obj["key char"] !== undefined;
-        return (hasKeyCode || hasKeyChar) && !(hasKeyCode && hasKeyChar);
-      }, "One of 'key code' or 'key char' is required"),
-    ],
+    }),
+    v.check((obj) => {
+      const hasKeyCode = obj["key code"] !== undefined;
+      const hasKeyChar = obj["key char"] !== undefined;
+      return (hasKeyCode || hasKeyChar) && !(hasKeyCode && hasKeyChar);
+    }, "One of 'key code' or 'key char' is required"),
   ),
 ]);
 
-const ActionCoreSchema = object({
-  title: optional(LocalizableStringSchema),
-  icon: optional(IconSchema),
-  identifier: optional(IdentifierSchema),
+const ActionCoreSchema = v.object({
+  title: v.optional(LocalizableStringSchema),
+  icon: v.optional(IconSchema),
+  identifier: v.optional(IdentifierSchema),
 });
 
-const ActionFlagsSchema = object({
-  app: optional(AppSchema),
-  apps: optional(array(AppSchema)),
-  "capture html": optional(boolean()),
-  "capture rtf": optional(boolean()),
-  "stay visible": optional(boolean()),
-  "restore pasteboard": optional(boolean()),
-  requirements: optional(array(SaneStringSchema)),
-  "required apps": optional(array(SaneStringSchema)),
-  "excluded apps": optional(array(SaneStringSchema)),
-  regex: optional(LongStringSchema),
-  before: optional(SaneStringSchema),
-  after: optional(SaneStringSchema),
-  permissions: optional(array(SaneStringSchema)),
+const ActionFlagsSchema = v.object({
+  app: v.optional(AppSchema),
+  apps: v.optional(v.array(AppSchema)),
+  "capture html": v.optional(v.boolean()),
+  "capture rtf": v.optional(v.boolean()),
+  "stay visible": v.optional(v.boolean()),
+  "restore pasteboard": v.optional(v.boolean()),
+  requirements: v.optional(v.array(SaneStringSchema)),
+  "required apps": v.optional(v.array(SaneStringSchema)),
+  "excluded apps": v.optional(v.array(SaneStringSchema)),
+  regex: v.optional(LongStringSchema),
+  before: v.optional(SaneStringSchema),
+  after: v.optional(SaneStringSchema),
+  permissions: v.optional(v.array(SaneStringSchema)),
 });
 
-const ServiceActionSchema = object({
-  "service name": optional(SaneStringSchema),
+const ServiceActionSchema = v.object({
+  "service name": v.optional(SaneStringSchema),
 });
 
-const ShortcutActionSchema = object({
-  "shortcut name": optional(SaneStringSchema),
+const ShortcutActionSchema = v.object({
+  "shortcut name": v.optional(SaneStringSchema),
 });
 
-const UrlActionSchema = object({
-  url: optional(SaneStringSchema),
-  "alternate url": optional(SaneStringSchema),
-  "clean query": optional(boolean()),
+const UrlActionSchema = v.object({
+  url: v.optional(SaneStringSchema),
+  "alternate url": v.optional(SaneStringSchema),
+  "clean query": v.optional(v.boolean()),
 });
 
-const KeyComboActionSchema = object({
-  "key combo": optional(KeyComboSchema),
-  "key combos": optional(array(KeyComboSchema)),
+const KeyComboActionSchema = v.object({
+  "key combo": v.optional(KeyComboSchema),
+  "key combos": v.optional(v.array(KeyComboSchema)),
 });
 
-const AppleScriptActionSchema = object({
-  applescript: optional(LongStringSchema),
-  "applescript file": optional(SaneStringSchema),
-  "applescript call": optional(
-    object({
-      file: optional(SaneStringSchema),
-      handler: nonOptional(SaneStringSchema, "Handler name is required"),
-      parameters: optional(array(SaneStringSchema)),
+const AppleScriptActionSchema = v.object({
+  applescript: v.optional(LongStringSchema),
+  "applescript file": v.optional(SaneStringSchema),
+  "applescript call": v.optional(
+    v.object({
+      file: v.optional(SaneStringSchema),
+      handler: v.nonOptional(SaneStringSchema, "Handler name is required"),
+      parameters: v.optional(v.array(SaneStringSchema)),
     }),
   ),
 });
 
-const ShellScriptActionSchema = object({
-  "shell script": optional(LongStringSchema),
-  "shell script file": optional(SaneStringSchema),
-  interpreter: optional(SaneStringSchema),
-  stdin: optional(SaneStringSchema),
+const ShellScriptActionSchema = v.object({
+  "shell script": v.optional(LongStringSchema),
+  "shell script file": v.optional(SaneStringSchema),
+  interpreter: v.optional(SaneStringSchema),
+  stdin: v.optional(SaneStringSchema),
 });
 
-const JavaScriptActionSchema = object({
-  javascript: optional(LongStringSchema),
-  "javascript file": optional(SaneStringSchema),
+const JavaScriptActionSchema = v.object({
+  javascript: v.optional(LongStringSchema),
+  "javascript file": v.optional(SaneStringSchema),
 });
 
-export const ActionSchema = merge([
-  ActionCoreSchema,
-  ActionFlagsSchema,
-  IconModifiersSchema,
-  ServiceActionSchema,
-  ShortcutActionSchema,
-  UrlActionSchema,
-  KeyComboActionSchema,
-  AppleScriptActionSchema,
-  ShellScriptActionSchema,
-  JavaScriptActionSchema,
-]);
+export const ActionSchema = v.object({
+  ...ActionCoreSchema.entries,
+  ...ActionFlagsSchema.entries,
+  ...IconModifiersSchema.entries,
+  ...ServiceActionSchema.entries,
+  ...ShortcutActionSchema.entries,
+  ...UrlActionSchema.entries,
+  ...KeyComboActionSchema.entries,
+  ...AppleScriptActionSchema.entries,
+  ...ShellScriptActionSchema.entries,
+  ...JavaScriptActionSchema.entries,
+});
 
-const ExtensionCoreSchema = object({
-  name: nonOptional(LocalizableStringSchema, "A name is required"),
-  icon: optional(IconSchema),
-  identifier: optional(IdentifierSchema),
-  "popclip version": optional(VersionNumberSchema),
-  "macos version": optional(VersionStringSchema),
-  entitlements: optional(array(SaneStringSchema)),
+const ExtensionCoreSchema = v.object({
+  name: v.nonOptional(LocalizableStringSchema, "A name is required"),
+  icon: v.optional(IconSchema),
+  identifier: v.optional(IdentifierSchema),
+  "popclip version": v.optional(VersionNumberSchema),
+  "macos version": v.optional(VersionStringSchema),
+  entitlements: v.optional(v.array(SaneStringSchema)),
 
   // module
-  module: optional(union([SaneStringSchema, literal(true)])),
-  language: optional(SaneStringSchema),
+  module: v.optional(v.union([SaneStringSchema, v.literal(true)])),
+  language: v.optional(SaneStringSchema),
 
   // actions
-  action: optional(ActionSchema),
-  actions: optional(array(ActionSchema)),
+  action: v.optional(ActionSchema),
+  actions: v.optional(v.array(ActionSchema)),
 
   // options
-  options: optional(array(OptionSchema)),
-  "options title": optional(LocalizableStringSchema),
-  "options script file": optional(SaneStringSchema),
+  options: v.optional(v.array(OptionSchema)),
+  "options title": v.optional(LocalizableStringSchema),
+  "options script file": v.optional(SaneStringSchema),
 });
 
-const MetadataSchema = object({
-  description: optional(LocalizableStringSchema),
-  keywords: optional(SaneStringSchema),
+const MetadataSchema = v.object({
+  description: v.optional(LocalizableStringSchema),
+  keywords: v.optional(SaneStringSchema),
 });
 
-export const ExtensionSchema = merge([
-  ExtensionCoreSchema,
-  ActionSchema,
-  MetadataSchema,
-]);
+export const ExtensionSchema = v.object({
+  ...ExtensionCoreSchema.entries,
+  ...ActionSchema.entries,
+  ...MetadataSchema.entries,
+});
 
 export function validateStaticConfig(config: unknown) {
   try {
-    return parse(ExtensionSchema, config);
+    return v.parse(ExtensionSchema, config);
   } catch (error) {
-    if (error instanceof ValiError) {
+    if (error instanceof v.ValiError) {
       throw new Error(formatValiIssues(error.issues));
     }
     const msg = error instanceof Error ? error.message : "Unknown error";

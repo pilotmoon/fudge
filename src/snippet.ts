@@ -1,7 +1,7 @@
-import { Config } from "./config.js";
+import type { Config } from "./config.js";
 import { log } from "./log.js";
 import { parseYamlObject } from "./parsers.js";
-import { standardizeConfig, standardizeKey as sk } from "./std.js";
+import { standardizeKey as sk, standardizeConfig } from "./std.js";
 
 export function lines(string: string) {
   return string.split(/\r\n|\n|\r/);
@@ -33,7 +33,7 @@ function candidateYaml(string: string) {
   const candidateYaml = extractPrefixedBlock(components[0], components[1]);
 
   // a snippet always contains something like `name:` or `name":`
-  if (!/name\"\s*:|name:\s+/is.test(candidateYaml)) {
+  if (!/name"\s*:|name:\s+/is.test(candidateYaml)) {
     return null;
   }
 
@@ -110,7 +110,7 @@ function forceString(val: unknown) {
   return typeof val === "string" ? val : "";
 }
 
-export function configFromText(text: string, externalSuffix: string = "") {
+export function configFromText(text: string, externalSuffix = "") {
   const yaml = candidateYaml(text);
   if (yaml === null) {
     return null;

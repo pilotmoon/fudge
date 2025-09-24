@@ -1,5 +1,5 @@
 import { lowerCase } from "case-anything";
-import { Config, transformConfig } from "./config.js";
+import { type Config, transformConfig } from "./config.js";
 import { mapping } from "./mapping.json";
 
 export function standardizeKey(key: string) {

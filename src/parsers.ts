@@ -1,12 +1,12 @@
 import { parse as parsePlist } from "fast-plist";
 import { JSON_SCHEMA, load as parseYaml } from "js-yaml";
-import { ValiError, parse, record, unknown } from "valibot";
+import * as v from "valibot";
 
-const VConfigObject = record(unknown());
+const VConfigObject = v.record(v.string(), v.unknown());
 
 export function parsePlistObject(plist: string) {
   try {
-    return parse(
+    return v.parse(
       VConfigObject,
       parsePlist(
         // remove any Credits array, as there are invalid ones out there
@@ -14,7 +14,7 @@ export function parsePlistObject(plist: string) {
       ),
     );
   } catch (e) {
-    if (e instanceof ValiError) {
+    if (e instanceof v.ValiError) {
       throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {
@@ -26,9 +26,9 @@ export function parsePlistObject(plist: string) {
 
 export function parseJsonObject(jsonSource: string) {
   try {
-    return parse(VConfigObject, JSON.parse(jsonSource));
+    return v.parse(VConfigObject, JSON.parse(jsonSource));
   } catch (e) {
-    if (e instanceof ValiError) {
+    if (e instanceof v.ValiError) {
       throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {
@@ -40,9 +40,12 @@ export function parseJsonObject(jsonSource: string) {
 
 export function parseYamlObject(yamlSource: string) {
   try {
-    return parse(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
+    return v.parse(
+      VConfigObject,
+      parseYaml(yamlSource, { schema: JSON_SCHEMA }),
+    );
   } catch (e) {
-    if (e instanceof ValiError) {
+    if (e instanceof v.ValiError) {
       throw new Error(`Invalid config: ${e.message}`);
     }
     if (e instanceof Error) {

@@ -1,21 +1,12 @@
+import * as v from "valibot";
+import { IconComponentsSchema, standardizeIcon } from "./icon";
 import {
-  Output,
-  array,
-  object,
-  optional,
-  parse,
-  picklist,
-  record,
-  unknown,
-} from "valibot";
-import {
-  ExtensionSchema,
-  AppSchema,
+  type AppSchema,
+  type ExtensionSchema,
   LocalizableStringSchema,
   SaneStringSchema,
   VersionNumberSchema,
 } from "./validate";
-import { IconComponentsSchema, standardizeIcon } from "./icon";
 
 const SENTINEL_KEYS = {
   service: ["service name"],
@@ -27,28 +18,30 @@ const SENTINEL_KEYS = {
   shortcut: ["shortcut name"],
   none: [],
 };
-const ActionTypeSchema = picklist(Object.keys(SENTINEL_KEYS));
+const ActionTypeSchema = v.picklist(Object.keys(SENTINEL_KEYS));
 
-const ExtensionsSummarySchema = object({
+const ExtensionsSummarySchema = v.object({
   name: LocalizableStringSchema,
-  identifier: optional(SaneStringSchema),
-  description: optional(LocalizableStringSchema),
-  keywords: optional(SaneStringSchema),
-  icon: optional(IconComponentsSchema),
-  actionTypes: array(ActionTypeSchema),
-  entitlements: optional(array(SaneStringSchema)),
-  apps: optional(
-    array(object({ name: SaneStringSchema, link: SaneStringSchema })),
+  identifier: v.optional(SaneStringSchema),
+  description: v.optional(LocalizableStringSchema),
+  keywords: v.optional(SaneStringSchema),
+  icon: v.optional(IconComponentsSchema),
+  actionTypes: v.array(ActionTypeSchema),
+  entitlements: v.optional(v.array(SaneStringSchema)),
+  apps: v.optional(
+    v.array(v.object({ name: SaneStringSchema, link: SaneStringSchema })),
   ),
-  macosVersion: optional(SaneStringSchema),
-  popclipVersion: optional(VersionNumberSchema),
+  macosVersion: v.optional(SaneStringSchema),
+  popclipVersion: v.optional(VersionNumberSchema),
 });
 
-function normalizeLocalizedString(ls?: Output<typeof LocalizableStringSchema>) {
+function normalizeLocalizedString(
+  ls?: v.InferOutput<typeof LocalizableStringSchema>,
+) {
   return typeof ls === "object" && Object.entries(ls).length === 1 ? ls.en : ls;
 }
 
-export function extractSummary(config: Output<typeof ExtensionSchema>) {
+export function extractSummary(config: v.InferOutput<typeof ExtensionSchema>) {
   // build actions list
   const actions = config.actions
     ? config.actions
@@ -78,7 +71,7 @@ export function extractSummary(config: Output<typeof ExtensionSchema>) {
   } else {
     for (const action of [...actions, config]) {
       for (const [type, keys] of Object.entries(SENTINEL_KEYS)) {
-        if (keys.some((key) => action.hasOwnProperty(key))) {
+        if (keys.some((key) => Object.hasOwn(action, key))) {
           actionTypesSet.add(type);
           break;
         }
@@ -91,7 +84,7 @@ export function extractSummary(config: Output<typeof ExtensionSchema>) {
   const actionTypes = Array.from(actionTypesSet);
 
   // extract app links
-  const apps: Output<typeof AppSchema>[] = [];
+  const apps: v.InferOutput<typeof AppSchema>[] = [];
   for (const obj of [config, ...actions]) {
     if (obj.apps) {
       for (const app of obj.apps) {
@@ -102,7 +95,7 @@ export function extractSummary(config: Output<typeof ExtensionSchema>) {
     }
   }
 
-  return parse(ExtensionsSummarySchema, {
+  return v.parse(ExtensionsSummarySchema, {
     name: normalizeLocalizedString(config.name),
     actionTypes,
     identifier: config.identifier,

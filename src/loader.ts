@@ -1,5 +1,5 @@
-import { type Output, array, object, parse, string } from "valibot";
-import { type Config } from "./config.js";
+import * as v from "valibot";
+import type { Config } from "./config.js";
 import {
   parseJsonObject,
   parsePlistObject,
@@ -8,10 +8,10 @@ import {
 import { loadSnippet } from "./snippet.js";
 import { standardizeConfig } from "./std.js";
 
-const VConfigFiles = array(
-  object({
-    name: string(),
-    contents: string(),
+const VConfigFiles = v.array(
+  v.object({
+    name: v.string(),
+    contents: v.string(),
   }),
 );
 
@@ -24,8 +24,10 @@ const configFileNames = [
   yamlConfigFileName,
 ];
 
-export function loadStaticConfig(obj: Output<typeof VConfigFiles>): Config {
-  const configFiles = parse(VConfigFiles, obj);
+export function loadStaticConfig(
+  obj: v.InferOutput<typeof VConfigFiles>,
+): Config {
+  const configFiles = v.parse(VConfigFiles, obj);
   const result = {};
 
   // sort the config files in order; first, in the order of configFileNames, then in alphabetical order
