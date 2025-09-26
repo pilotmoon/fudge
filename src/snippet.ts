@@ -8,12 +8,15 @@ export function lines(string: string) {
 }
 
 // return all lines with the given prefix, with the prefix removed.
-// the output stops at the first empty or unprefixed line.
+// when there is no prefix, treat the snippet as a single YAML block.
 function extractPrefixedBlock(string: string, prefix: string) {
-  const result = [];
+  if (prefix === "") {
+    return string;
+  }
+  const result: string[] = [];
   for (const line of lines(string)) {
-    if (line !== "" && (prefix === "" || line.startsWith(prefix))) {
-      result.push(line.replace(prefix, ""));
+    if (line.startsWith(prefix)) {
+      result.push(line.slice(prefix.length));
     } else {
       break;
     }

@@ -320,10 +320,13 @@ function lines(string3) {
   return string3.split(/\r\n|\n|\r/);
 }
 function extractPrefixedBlock(string3, prefix) {
+  if (prefix === "") {
+    return string3;
+  }
   const result = [];
   for (const line of lines(string3)) {
-    if (line !== "" && (prefix === "" || line.startsWith(prefix))) {
-      result.push(line.replace(prefix, ""));
+    if (line.startsWith(prefix)) {
+      result.push(line.slice(prefix.length));
     } else {
       break;
     }
