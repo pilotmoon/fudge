@@ -634,9 +634,14 @@ var JavaScriptActionSchema = v5.object({
   javascript: v5.optional(LongStringSchema),
   "javascript file": v5.optional(SaneStringSchema)
 });
+var MenuNodeSchema = v5.object({
+  submenu: v5.optional(v5.array(v5.lazy(() => ActionSchema))),
+  separator: v5.optional(v5.boolean())
+});
 var ActionSchema = v5.object({
   ...ActionCoreSchema.entries,
   ...ActionFlagsSchema.entries,
+  ...MenuNodeSchema.entries,
   ...IconModifiersSchema.entries,
   ...ServiceActionSchema.entries,
   ...ShortcutActionSchema.entries,

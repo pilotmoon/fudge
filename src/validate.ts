@@ -179,9 +179,15 @@ const JavaScriptActionSchema = v.object({
   "javascript file": v.optional(SaneStringSchema),
 });
 
+const MenuNodeSchema = v.object({
+  submenu: v.optional(v.array(v.lazy((): v.GenericSchema<unknown> => ActionSchema))),
+  separator: v.optional(v.boolean()),
+});
+
 export const ActionSchema = v.object({
   ...ActionCoreSchema.entries,
   ...ActionFlagsSchema.entries,
+  ...MenuNodeSchema.entries,
   ...IconModifiersSchema.entries,
   ...ServiceActionSchema.entries,
   ...ShortcutActionSchema.entries,
