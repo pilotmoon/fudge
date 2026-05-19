@@ -563,6 +563,7 @@ var OptionSchema = v5.object({
   "default value": v5.optional(v5.union([SaneStringAllowingEmptySchema, v5.boolean()])),
   hidden: v5.optional(v5.boolean()),
   inset: v5.optional(v5.boolean()),
+  multiline: v5.optional(v5.boolean()),
   icon: v5.optional(IconSchema),
   ...IconModifiersSchema.entries
 });

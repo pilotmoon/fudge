@@ -81,6 +81,7 @@ const OptionSchema = v.object({
   ),
   hidden: v.optional(v.boolean()),
   inset: v.optional(v.boolean()),
+  multiline: v.optional(v.boolean()),
   icon: v.optional(IconSchema),
   ...IconModifiersSchema.entries,
 });
