@@ -136,6 +136,8 @@ const ActionFlagsSchema = v.object({
   before: v.optional(SaneStringSchema),
   after: v.optional(SaneStringSchema),
   permissions: v.optional(v.array(SaneStringSchema)),
+  "show as": v.optional(v.picklist(["icon", "text", "both"])),
+  color: v.optional(SaneStringSchema),
 });
 
 const ServiceActionSchema = v.object({
@@ -182,7 +184,9 @@ const JavaScriptActionSchema = v.object({
 });
 
 const MenuNodeSchema = v.object({
-  submenu: v.optional(v.array(v.lazy((): v.GenericSchema<unknown> => ActionSchema))),
+  submenu: v.optional(
+    v.array(v.lazy((): v.GenericSchema<unknown> => ActionSchema)),
+  ),
   separator: v.optional(v.boolean()),
 });
 

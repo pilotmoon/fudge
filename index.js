@@ -600,7 +600,9 @@ var ActionFlagsSchema = v5.object({
   regex: v5.optional(LongStringSchema),
   before: v5.optional(SaneStringSchema),
   after: v5.optional(SaneStringSchema),
-  permissions: v5.optional(v5.array(SaneStringSchema))
+  permissions: v5.optional(v5.array(SaneStringSchema)),
+  "show as": v5.optional(v5.picklist(["icon", "text", "both"])),
+  color: v5.optional(SaneStringSchema)
 });
 var ServiceActionSchema = v5.object({
   "service name": v5.optional(SaneStringSchema)
