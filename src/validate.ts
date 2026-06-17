@@ -211,6 +211,7 @@ const ExtensionCoreSchema = v.object({
   "popclip version": v.optional(VersionNumberSchema),
   "macos version": v.optional(VersionStringSchema),
   entitlements: v.optional(v.array(SaneStringSchema)),
+  "offers multiple instances": v.optional(v.boolean()),
 
   // module
   module: v.optional(v.union([SaneStringSchema, v.literal(true)])),

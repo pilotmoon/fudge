@@ -662,6 +662,7 @@ var ExtensionCoreSchema = v5.object({
   "popclip version": v5.optional(VersionNumberSchema),
   "macos version": v5.optional(VersionStringSchema),
   entitlements: v5.optional(v5.array(SaneStringSchema)),
+  "offers multiple instances": v5.optional(v5.boolean()),
   module: v5.optional(v5.union([SaneStringSchema, v5.literal(true)])),
   language: v5.optional(SaneStringSchema),
   action: v5.optional(ActionSchema),
