@@ -212,6 +212,7 @@ const ExtensionCoreSchema = v.object({
   "macos version": v.optional(VersionStringSchema),
   entitlements: v.optional(v.array(SaneStringSchema)),
   "offers multiple instances": v.optional(v.boolean()),
+  "auth account title": v.optional(SaneStringSchema),
 
   // module
   module: v.optional(v.union([SaneStringSchema, v.literal(true)])),
