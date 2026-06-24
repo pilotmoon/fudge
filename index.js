@@ -564,7 +564,8 @@ var OptionSchema = v5.object({
   hidden: v5.optional(v5.boolean()),
   inset: v5.optional(v5.boolean()),
   multiline: v5.optional(v5.boolean()),
-  custom: v5.optional(v5.boolean()),
+  "allow custom": v5.optional(v5.boolean()),
+  "allow none": v5.optional(v5.boolean()),
   icon: v5.optional(IconSchema),
   ...IconModifiersSchema.entries
 });
