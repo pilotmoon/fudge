@@ -26,14 +26,24 @@ function extractPrefixedBlock(string: string, prefix: string) {
 
 // extract what might possibly be a #popclip YAML header from the given string
 function candidateYaml(string: string) {
-  // get the line starting with with #popclip and all subsequent content
-  const components = string.match(/([^\n]*)# ?popclip.+$/is);
-  if (components?.length !== 2) {
+  // locate the first #popclip marker, requiring at least one character after it.
+  // search for the bare marker and slice out the line: matching the line prefix
+  // with a regex (/([^\n]*)# ?popclip.+$/is) backtracks quadratically, taking
+  // tens of seconds on large single-line files with no marker.
+  const found = string.match(/# ?popclip(?=[\s\S])/i);
+  if (!found || found.index === undefined) {
     return null;
   }
 
+  // the candidate block starts at the marker's line; text on that line before
+  // the marker (e.g. "// ") is the prefix
+  const lineStart = string.lastIndexOf("\n", found.index) + 1;
+
   // then extract the candidate lines
-  const candidateYaml = extractPrefixedBlock(components[0], components[1]);
+  const candidateYaml = extractPrefixedBlock(
+    string.slice(lineStart),
+    string.slice(lineStart, found.index),
+  );
 
   // a snippet always contains something like `name:` or `name":`
   if (!/name"\s*:|name:\s+/is.test(candidateYaml)) {
