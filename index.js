@@ -335,11 +335,13 @@ function extractPrefixedBlock(string3, prefix) {
 `);
 }
 function candidateYaml(string3) {
-  const components = string3.match(/([^\n]*)# ?popclip.+$/is);
-  if (components?.length !== 2) {
+  const found = string3.match(/# ?popclip(?=[\s\S])/i);
+  if (!found || found.index === undefined) {
     return null;
   }
-  const candidateYaml2 = extractPrefixedBlock(components[0], components[1]);
+  const lineStart = string3.lastIndexOf(`
+`, found.index) + 1;
+  const candidateYaml2 = extractPrefixedBlock(string3.slice(lineStart), string3.slice(lineStart, found.index));
   if (!/name"\s*:|name:\s+/is.test(candidateYaml2)) {
     return null;
   }
@@ -613,8 +615,8 @@ var ShortcutActionSchema = v5.object({
 });
 var UrlActionSchema = v5.object({
   url: v5.optional(SaneStringSchema),
-  "alternate url": v5.optional(SaneStringSchema),
-  "clean query": v5.optional(v5.boolean())
+  "clean query": v5.optional(v5.boolean()),
+  "spaces as plus": v5.optional(v5.boolean())
 });
 var KeyComboActionSchema = v5.object({
   "key combo": v5.optional(KeyComboSchema),

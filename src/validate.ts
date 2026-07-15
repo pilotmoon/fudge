@@ -151,8 +151,8 @@ const ShortcutActionSchema = v.object({
 
 const UrlActionSchema = v.object({
   url: v.optional(SaneStringSchema),
-  "alternate url": v.optional(SaneStringSchema),
   "clean query": v.optional(v.boolean()),
+  "spaces as plus": v.optional(v.boolean()),
 });
 
 const KeyComboActionSchema = v.object({
