@@ -21,6 +21,8 @@
     "lang": "language",
     "js": "javascript",
     "ts": "typescript",
+    "allow custom": "allow other",
+    "auth account label": "auth service label",
     "params": "parameters",
     "id": "identifier"
   }

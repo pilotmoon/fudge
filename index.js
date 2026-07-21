@@ -53,6 +53,8 @@ var mapping = {
   lang: "language",
   js: "javascript",
   ts: "typescript",
+  "allow custom": "allow other",
+  "auth account label": "auth service label",
   params: "parameters",
   id: "identifier"
 };
@@ -566,7 +568,7 @@ var OptionSchema = v5.object({
   hidden: v5.optional(v5.boolean()),
   inset: v5.optional(v5.boolean()),
   multiline: v5.optional(v5.boolean()),
-  "allow custom": v5.optional(v5.boolean()),
+  "allow other": v5.optional(v5.boolean()),
   "allow none": v5.optional(v5.boolean()),
   icon: v5.optional(IconSchema),
   ...IconModifiersSchema.entries
@@ -604,7 +606,7 @@ var ActionFlagsSchema = v5.object({
   before: v5.optional(SaneStringSchema),
   after: v5.optional(SaneStringSchema),
   permissions: v5.optional(v5.array(SaneStringSchema)),
-  "show as": v5.optional(v5.picklist(["icon", "text", "both"])),
+  "show as": v5.optional(v5.picklist(["icon", "text"])),
   color: v5.optional(SaneStringSchema)
 });
 var ServiceActionSchema = v5.object({
@@ -666,7 +668,7 @@ var ExtensionCoreSchema = v5.object({
   "macos version": v5.optional(VersionStringSchema),
   entitlements: v5.optional(v5.array(SaneStringSchema)),
   "offers multiple instances": v5.optional(v5.boolean()),
-  "auth account label": v5.optional(LocalizableStringSchema),
+  "auth service label": v5.optional(LocalizableStringSchema),
   module: v5.optional(v5.union([SaneStringSchema, v5.literal(true)])),
   language: v5.optional(SaneStringSchema),
   action: v5.optional(ActionSchema),

@@ -82,7 +82,7 @@ const OptionSchema = v.object({
   hidden: v.optional(v.boolean()),
   inset: v.optional(v.boolean()),
   multiline: v.optional(v.boolean()),
-  "allow custom": v.optional(v.boolean()),
+  "allow other": v.optional(v.boolean()),
   "allow none": v.optional(v.boolean()),
   icon: v.optional(IconSchema),
   ...IconModifiersSchema.entries,
@@ -137,7 +137,7 @@ const ActionFlagsSchema = v.object({
   before: v.optional(SaneStringSchema),
   after: v.optional(SaneStringSchema),
   permissions: v.optional(v.array(SaneStringSchema)),
-  "show as": v.optional(v.picklist(["icon", "text", "both"])),
+  "show as": v.optional(v.picklist(["icon", "text"])),
   color: v.optional(SaneStringSchema),
 });
 
@@ -213,7 +213,7 @@ const ExtensionCoreSchema = v.object({
   "macos version": v.optional(VersionStringSchema),
   entitlements: v.optional(v.array(SaneStringSchema)),
   "offers multiple instances": v.optional(v.boolean()),
-  "auth account label": v.optional(LocalizableStringSchema),
+  "auth service label": v.optional(LocalizableStringSchema),
 
   // module
   module: v.optional(v.union([SaneStringSchema, v.literal(true)])),
