@@ -622,7 +622,8 @@ var UrlActionSchema = v5.object({
 });
 var KeyComboActionSchema = v5.object({
   "key combo": v5.optional(KeyComboSchema),
-  "key combos": v5.optional(v5.array(KeyComboSchema))
+  "key combos": v5.optional(v5.array(KeyComboSchema)),
+  "key combo target": v5.optional(v5.picklist(["app", "session", "hid"]))
 });
 var AppleScriptActionSchema = v5.object({
   applescript: v5.optional(LongStringSchema),
