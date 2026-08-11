@@ -139,6 +139,9 @@ const ActionFlagsSchema = v.object({
   permissions: v.optional(v.array(SaneStringSchema)),
   "show as": v.optional(v.picklist(["icon", "text"])),
   color: v.optional(SaneStringSchema),
+  // Presentation preference, not a command: the action asks to be the popup's primary
+  // (expanded) display; PopClip may ignore it. Static half of the wantsPrimaryDisplay hint.
+  "wants primary display": v.optional(v.boolean()),
 });
 
 const ServiceActionSchema = v.object({
