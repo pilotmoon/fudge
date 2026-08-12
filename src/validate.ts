@@ -139,9 +139,12 @@ const ActionFlagsSchema = v.object({
   permissions: v.optional(v.array(SaneStringSchema)),
   "show as": v.optional(v.picklist(["icon", "text"])),
   color: v.optional(SaneStringSchema),
-  // Presentation preference, not a command: the action asks to be the popup's primary
-  // (expanded) display; PopClip may ignore it. Static half of the wantsPrimaryDisplay hint.
+  /* Menu presentation hints. Preferences, not commands: PopClip may ignore either, and where
+   several ask, the first in popup order wins. "wants primary display" asks to be the button
+   centred above the pointer; "wants initial display" asks that an action's submenu already be
+   open when the popup appears. */
   "wants primary display": v.optional(v.boolean()),
+  "wants initial display": v.optional(v.boolean()),
 });
 
 const ServiceActionSchema = v.object({

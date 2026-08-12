@@ -607,7 +607,9 @@ var ActionFlagsSchema = v5.object({
   after: v5.optional(SaneStringSchema),
   permissions: v5.optional(v5.array(SaneStringSchema)),
   "show as": v5.optional(v5.picklist(["icon", "text"])),
-  color: v5.optional(SaneStringSchema)
+  color: v5.optional(SaneStringSchema),
+  "wants primary display": v5.optional(v5.boolean()),
+  "wants initial display": v5.optional(v5.boolean())
 });
 var ServiceActionSchema = v5.object({
   "service name": v5.optional(SaneStringSchema)
