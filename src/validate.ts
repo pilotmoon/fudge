@@ -164,9 +164,9 @@ const UrlActionSchema = v.object({
 const KeyComboActionSchema = v.object({
   "key combo": v.optional(KeyComboSchema),
   "key combos": v.optional(v.array(KeyComboSchema)),
-  // Where PopClip posts the key events: to the process of the app the action is acting on ("app",
-  // the default), to the session event tap ("session"), or to the HID event tap ("hid").
-  "key combo target": v.optional(v.picklist(["app", "session", "hid"])),
+  // Where PopClip posts the key events: to the session event tap ("session", the default), to the
+  // process of the app the action is acting on ("app"), or to the HID event tap ("hid").
+  "key combo target": v.optional(v.picklist(["session", "app", "hid"])),
 });
 
 const AppleScriptActionSchema = v.object({
