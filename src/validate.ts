@@ -223,6 +223,9 @@ const ExtensionCoreSchema = v.object({
   entitlements: v.optional(v.array(SaneStringSchema)),
   "offers multiple instances": v.optional(v.boolean()),
   "auth service label": v.optional(LocalizableStringSchema),
+  /* Extensions Directory submission requirement: an extension with a static
+   shell script action must explain why a shell script is needed. */
+  "shell script rationale": v.optional(LongStringSchema),
 
   // module
   module: v.optional(v.union([SaneStringSchema, v.literal(true)])),

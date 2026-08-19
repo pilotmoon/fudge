@@ -672,6 +672,7 @@ var ExtensionCoreSchema = v5.object({
   entitlements: v5.optional(v5.array(SaneStringSchema)),
   "offers multiple instances": v5.optional(v5.boolean()),
   "auth service label": v5.optional(LocalizableStringSchema),
+  "shell script rationale": v5.optional(LongStringSchema),
   module: v5.optional(v5.union([SaneStringSchema, v5.literal(true)])),
   language: v5.optional(SaneStringSchema),
   action: v5.optional(ActionSchema),
