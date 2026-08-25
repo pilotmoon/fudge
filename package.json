@@ -13,10 +13,8 @@
     "@types/js-yaml": "4.0.9",
     "axios": "1.6.8",
     "bun-types": "latest",
-    "fast-stable-stringify": "1.0.0"
-  },
-  "peerDependencies": {
-    "typescript": "5.9.2"
+    "fast-stable-stringify": "1.0.0",
+    "typescript": "7.0.2"
   },
   "dependencies": {
     "case-anything": "2.1.13",
