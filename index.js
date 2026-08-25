@@ -413,7 +413,6 @@ function configFromText(text, externalSuffix = "") {
   let suffix = forceString(suffixForEmbedType(embedType));
   suffix ||= forceString(externalSuffix);
   suffix ||= forceString(config.suffix);
-  log("suffix", suffix);
   const fileName = suffix ? `Config.${suffix}` : "Config";
   const isExecutable = isExecutableForEmbedType(embedType);
   return { config, embedType, fileName, isExecutable };
@@ -592,6 +591,37 @@ var ActionCoreSchema = v5.object({
   icon: v5.optional(IconSchema),
   identifier: v5.optional(IdentifierSchema)
 });
+var REQUIREMENT_KEYWORDS = [
+  "text",
+  "copy",
+  "cut",
+  "paste",
+  "formatting",
+  "url",
+  "isurl",
+  "httpurl",
+  "urls",
+  "httpurls",
+  "email",
+  "emails",
+  "path",
+  "html"
+];
+var RequirementSchema = v5.pipe(SaneStringSchema, v5.check((value) => {
+  const bare = value.startsWith("!") ? value.slice(1) : value;
+  return REQUIREMENT_KEYWORDS.includes(bare) || /^option-[^=]+=/.test(bare);
+}, "Invalid requirement (a keyword, !keyword, or option-<identifier>=<value>)"));
+var BEFORE_STEPS = ["copy", "cut", "paste", "paste-plain"];
+var AFTER_STEPS = [
+  ...BEFORE_STEPS,
+  "copy-result",
+  "paste-result",
+  "show-result",
+  "preview-result",
+  "show-status",
+  "copy-selection",
+  "popclip-appear"
+];
 var ActionFlagsSchema = v5.object({
   app: v5.optional(AppSchema),
   apps: v5.optional(v5.array(AppSchema)),
@@ -599,12 +629,12 @@ var ActionFlagsSchema = v5.object({
   "capture rtf": v5.optional(v5.boolean()),
   "stay visible": v5.optional(v5.boolean()),
   "restore pasteboard": v5.optional(v5.boolean()),
-  requirements: v5.optional(v5.array(SaneStringSchema)),
+  requirements: v5.optional(v5.array(RequirementSchema)),
   "required apps": v5.optional(v5.array(SaneStringSchema)),
   "excluded apps": v5.optional(v5.array(SaneStringSchema)),
   regex: v5.optional(LongStringSchema),
-  before: v5.optional(SaneStringSchema),
-  after: v5.optional(SaneStringSchema),
+  before: v5.optional(v5.picklist(BEFORE_STEPS)),
+  after: v5.optional(v5.picklist(AFTER_STEPS)),
   permissions: v5.optional(v5.array(SaneStringSchema)),
   "show as": v5.optional(v5.picklist(["icon", "text"])),
   color: v5.optional(SaneStringSchema),

@@ -136,7 +136,6 @@ export function configFromText(text: string, externalSuffix = "") {
   let suffix = forceString(suffixForEmbedType(embedType));
   suffix ||= forceString(externalSuffix);
   suffix ||= forceString(config.suffix);
-  log("suffix", suffix);
   const fileName = suffix ? `Config.${suffix}` : "Config";
   const isExecutable = isExecutableForEmbedType(embedType);
   return { config, embedType, fileName, isExecutable };

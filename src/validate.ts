@@ -123,6 +123,49 @@ const ActionCoreSchema = v.object({
   identifier: v.optional(IdentifierSchema),
 });
 
+/* The accepted values mirror what the app itself acts on (PopActionFlags.m).
+ `httpurl`, `httpurls` and `html` are undocumented legacy synonyms of `url`,
+ `urls` and `text`; they are accepted here because the app accepts them.
+ A requirement may be negated with a leading `!`, and the dynamic form
+ `option-<identifier>=<value>` matches against option values. */
+const REQUIREMENT_KEYWORDS = [
+  "text",
+  "copy",
+  "cut",
+  "paste",
+  "formatting",
+  "url",
+  "isurl",
+  "httpurl",
+  "urls",
+  "httpurls",
+  "email",
+  "emails",
+  "path",
+  "html",
+];
+const RequirementSchema = v.pipe(
+  SaneStringSchema,
+  v.check((value) => {
+    const bare = value.startsWith("!") ? value.slice(1) : value;
+    return (
+      REQUIREMENT_KEYWORDS.includes(bare) || /^option-[^=]+=/.test(bare)
+    );
+  }, "Invalid requirement (a keyword, !keyword, or option-<identifier>=<value>)"),
+);
+
+const BEFORE_STEPS = ["copy", "cut", "paste", "paste-plain"] as const;
+const AFTER_STEPS = [
+  ...BEFORE_STEPS,
+  "copy-result",
+  "paste-result",
+  "show-result",
+  "preview-result",
+  "show-status",
+  "copy-selection",
+  "popclip-appear",
+] as const;
+
 const ActionFlagsSchema = v.object({
   app: v.optional(AppSchema),
   apps: v.optional(v.array(AppSchema)),
@@ -130,12 +173,12 @@ const ActionFlagsSchema = v.object({
   "capture rtf": v.optional(v.boolean()),
   "stay visible": v.optional(v.boolean()),
   "restore pasteboard": v.optional(v.boolean()),
-  requirements: v.optional(v.array(SaneStringSchema)),
+  requirements: v.optional(v.array(RequirementSchema)),
   "required apps": v.optional(v.array(SaneStringSchema)),
   "excluded apps": v.optional(v.array(SaneStringSchema)),
   regex: v.optional(LongStringSchema),
-  before: v.optional(SaneStringSchema),
-  after: v.optional(SaneStringSchema),
+  before: v.optional(v.picklist(BEFORE_STEPS)),
+  after: v.optional(v.picklist(AFTER_STEPS)),
   permissions: v.optional(v.array(SaneStringSchema)),
   "show as": v.optional(v.picklist(["icon", "text"])),
   color: v.optional(SaneStringSchema),
