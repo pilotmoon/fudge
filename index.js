@@ -4,11 +4,12 @@ import emojiRegex from "emoji-regex";
 import * as v2 from "valibot";
 
 // src/log.ts
+var host = globalThis;
 function log(...args) {
-  if (typeof print === "function") {
-    print(...args);
-  } else if (typeof console === "object" && typeof console.log === "function") {
-    console.log(...args);
+  if (typeof host.print === "function") {
+    host.print(...args);
+  } else if (typeof host.console?.log === "function") {
+    host.console.log(...args);
   }
 }
 

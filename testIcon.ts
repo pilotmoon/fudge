@@ -1,4 +1,5 @@
 import { standardizeIcon } from "./src/icon.js";
+import { log } from "./src/log.js";
 
 // const _sy = require("fast-stable-stringify");
 
@@ -132,25 +133,25 @@ const testData = [
 //   }
 // }
 
-console.log("standardizeIcon");
+log("standardizeIcon");
 let count = 0;
 const fails: number[] = [];
 
 for (const { specifier, extraParams } of testData) {
-  console.log(`\nTEST ${++count}:`);
-  console.log(specifier, extraParams);
+  log(`\nTEST ${++count}:`);
+  log(specifier, extraParams);
   // const remoteExpected = await parseRemotely(specifier, extraParams);
-  // console.log("remoteExpected", remoteExpected);
+  // log("remoteExpected", remoteExpected);
   const result = standardizeIcon(specifier, extraParams ?? {});
-  console.log("result", result);
+  log("result", result);
 
   // // compare results
   // if (sy(result.result) === sy(remoteExpected)) {
-  //   console.log("✅");
+  //   log("✅");
   // } else {
-  //   //console.log("😑😑😑", sy(result.result), sy(remoteExpected));
+  //   //log("😑😑😑", sy(result.result), sy(remoteExpected));
   //   fails.push(count);
   // }
 }
 
-console.log("tests", count, "fails", fails.length, fails);
+log("tests", count, "fails", fails.length, fails);

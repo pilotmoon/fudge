@@ -1,39 +1,35 @@
-declare global {
-  // Minimal shape: fudge runs in PopClip's JS environment (no console), in
-  // Node/Bun, and in browsers -- so nothing here may assume dom or node types.
-  // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
-  var console: { log: (...args: any[]) => void; error: (...args: any[]) => void; warn: (...args: any[]) => void };
-  // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
-  function print(...args: any[]): void;
-}
+// Log to whatever the host provides, declaring no globals: fudge runs in
+// PopClip's JS environment (print, no console), in Node/Bun, and in projects
+// that declare their own console type -- an ambient declaration here would
+// conflict with theirs.
+// biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
+type LogFunction = (...args: any[]) => void;
+const host = globalThis as {
+  print?: LogFunction;
+  console?: { log?: LogFunction; error?: LogFunction; warn?: LogFunction };
+};
 
 // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
 export function log(...args: any[]) {
-  if (typeof print === "function") {
-    print(...args);
-  } else if (typeof console === "object" && typeof console.log === "function") {
-    console.log(...args);
+  if (typeof host.print === "function") {
+    host.print(...args);
+  } else if (typeof host.console?.log === "function") {
+    host.console.log(...args);
   }
 }
 // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
 export function loge(...args: any[]) {
-  if (typeof print === "function") {
-    print(...args);
-  } else if (
-    typeof console === "object" &&
-    typeof console.error === "function"
-  ) {
-    console.error(...args);
+  if (typeof host.print === "function") {
+    host.print(...args);
+  } else if (typeof host.console?.error === "function") {
+    host.console.error(...args);
   }
 }
 // biome-ignore lint/suspicious/noExplicitAny: mapping to underlying call
 export function logw(...args: any[]) {
-  if (typeof print === "function") {
-    print(...args);
-  } else if (
-    typeof console === "object" &&
-    typeof console.warn === "function"
-  ) {
-    console.warn(...args);
+  if (typeof host.print === "function") {
+    host.print(...args);
+  } else if (typeof host.console?.warn === "function") {
+    host.console.warn(...args);
   }
 }
