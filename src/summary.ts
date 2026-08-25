@@ -41,13 +41,34 @@ function normalizeLocalizedString(
   return typeof ls === "object" && Object.entries(ls).length === 1 ? ls.en : ls;
 }
 
+type ActionConfig = NonNullable<
+  v.InferOutput<typeof ExtensionSchema>["action"]
+>;
+
+// flatten actions in document order, descending into submenus
+function flattenActionNodes(roots: unknown[]): ActionConfig[] {
+  const result: ActionConfig[] = [];
+  const stack = [...roots].reverse();
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (!node || typeof node !== "object") continue;
+    const action = node as ActionConfig;
+    result.push(action);
+    if (Array.isArray(action.submenu)) {
+      for (let i = action.submenu.length - 1; i >= 0; i--) {
+        stack.push(action.submenu[i]);
+      }
+    }
+  }
+  return result;
+}
+
 export function extractSummary(config: v.InferOutput<typeof ExtensionSchema>) {
-  // build actions list
-  const actions = config.actions
-    ? config.actions
-    : config.action
-      ? [config.action]
-      : [];
+  // build actions list, including submenu descendants
+  const actions = flattenActionNodes([
+    ...(config.actions ? config.actions : config.action ? [config.action] : []),
+    ...(config.submenu ?? []),
+  ]);
 
   // extract icon
   const icon = (() => {

@@ -625,7 +625,7 @@ var UrlActionSchema = v5.object({
 var KeyComboActionSchema = v5.object({
   "key combo": v5.optional(KeyComboSchema),
   "key combos": v5.optional(v5.array(KeyComboSchema)),
-  "key combo target": v5.optional(v5.picklist(["app", "session", "hid"]))
+  "key combo target": v5.optional(v5.picklist(["session", "app", "hid"]))
 });
 var AppleScriptActionSchema = v5.object({
   applescript: v5.optional(LongStringSchema),
@@ -729,8 +729,28 @@ var ExtensionsSummarySchema = v6.object({
 function normalizeLocalizedString(ls) {
   return typeof ls === "object" && Object.entries(ls).length === 1 ? ls.en : ls;
 }
+function flattenActionNodes(roots) {
+  const result = [];
+  const stack = [...roots].reverse();
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (!node || typeof node !== "object")
+      continue;
+    const action = node;
+    result.push(action);
+    if (Array.isArray(action.submenu)) {
+      for (let i = action.submenu.length - 1;i >= 0; i--) {
+        stack.push(action.submenu[i]);
+      }
+    }
+  }
+  return result;
+}
 function extractSummary(config) {
-  const actions = config.actions ? config.actions : config.action ? [config.action] : [];
+  const actions = flattenActionNodes([
+    ...config.actions ? config.actions : config.action ? [config.action] : [],
+    ...config.submenu ?? []
+  ]);
   const icon = (() => {
     for (const obj of [config, ...actions]) {
       if (obj.icon) {
