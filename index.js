@@ -17,8 +17,7 @@ import { lowerCase } from "case-anything";
 
 // src/config.ts
 function transformConfig(val, fn) {
-  if (typeof val !== "object" || val === null)
-    return val;
+  if (typeof val !== "object" || val === null) return val;
   const result = {};
   for (const [key, obj] of Object.entries(val)) {
     if (Array.isArray(obj)) {
@@ -86,8 +85,7 @@ function formatValiIssues(issues) {
       messages.push(`${fmt.dotPath}: ${fmt.message}`);
     }
   }
-  return messages.join(`
-`);
+  return messages.join("\n");
 }
 function formatValiIssue(issue) {
   const dotPath = v.getDotPath(issue);
@@ -96,7 +94,9 @@ function formatValiIssue(issue) {
     return { dotPath: "", message };
   }
   if (Array.isArray(issue.issues) && issue.issues.length > 0) {
-    const fmt = formatValiIssue(issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]);
+    const fmt = formatValiIssue(
+      issue.issues?.find((item) => item?.path?.length ?? 0) ?? issue.issues[0]
+    );
     fmt.dotPath = fmt.dotPath ? `${dotPath}.${fmt.dotPath}` : dotPath;
     return fmt;
   }
@@ -105,22 +105,29 @@ function formatValiIssue(issue) {
 
 // src/icon.ts
 var r = new RegExp(`^(${emojiRegex().source})$`);
-function isSingleEmoji(string2) {
-  return r.test(string2);
+function isSingleEmoji(string5) {
+  return r.test(string5);
 }
 var IntegerFromString = v2.union([
   v2.pipe(v2.number(), v2.safeInteger()),
-  v2.pipe(v2.string(), v2.transform((x) => Number(x)), v2.safeInteger())
+  v2.pipe(
+    v2.string(),
+    v2.transform((x) => Number(x)),
+    v2.safeInteger()
+  )
 ]);
 var BooleanFromString = v2.union([
   v2.boolean(),
-  v2.pipe(v2.string(), v2.transform((x) => x === "" || x === "1"))
+  v2.pipe(
+    v2.string(),
+    v2.transform((x) => x === "" || x === "1")
+  )
 ]);
 var SHAPE_NAMES = ["search", "circle", "square"];
 var ICON_PARAM_DEFAULTS = {
-  "preserve color": undefined,
-  "preserve aspect": undefined,
-  shape: undefined,
+  "preserve color": void 0,
+  "preserve aspect": void 0,
+  shape: void 0,
   filled: false,
   strike: false,
   monospaced: false,
@@ -145,7 +152,9 @@ var IconModifiersSchema = v2.object({
   scale: v2.optional(IntegerFromString),
   rotate: v2.optional(IntegerFromString)
 });
-var defaultModifierValues = new Map(Object.entries(ICON_PARAM_DEFAULTS));
+var defaultModifierValues = new Map(
+  Object.entries(ICON_PARAM_DEFAULTS)
+);
 var IconComponentsSchema = v2.object({
   prefix: v2.string(),
   payload: v2.string(),
@@ -156,12 +165,9 @@ function renderModifier(key, value) {
   if (key === "shape" && typeof value === "string") {
     return SHAPE_NAMES.includes(value) ? value : "";
   }
-  if (typeof value === "boolean")
-    return value ? key : `${key}=0`;
-  if (typeof value === "number")
-    return `${key}=${value.toString()}`;
-  if (typeof value === "string")
-    return `${key}=${value}`;
+  if (typeof value === "boolean") return value ? key : `${key}=0`;
+  if (typeof value === "number") return `${key}=${value.toString()}`;
+  if (typeof value === "string") return `${key}=${value}`;
   return "";
 }
 function descriptorStringFromComponents(components) {
@@ -198,39 +204,38 @@ function standardizeIcon(specifier, extraParams) {
   parsed.result.modifiers = validated.output;
   return parsed;
 }
-function parseDescriptorString(string2) {
-  string2 = string2.trim();
+function parseDescriptorString(string5) {
+  string5 = string5.trim();
   {
-    const components2 = string2.match(/^(?:text:)?\[\[(.{1,3})\]\]$/);
-    if (components2)
-      string2 = `square filled ${components2[1]}`;
+    const components2 = string5.match(/^(?:text:)?\[\[(.{1,3})\]\]$/);
+    if (components2) string5 = `square filled ${components2[1]}`;
   }
   {
-    const components2 = string2.match(/^text:((?:[a-z]{2,10} )+)(\S{1,3}|\S \S)/);
-    if (components2)
-      string2 = `${components2[1]}text:${components2[2]}`;
+    const components2 = string5.match(/^text:((?:[a-z]{2,10} )+)(\S{1,3}|\S \S)/);
+    if (components2) string5 = `${components2[1]}text:${components2[2]}`;
   }
   {
-    const components2 = string2.match(/^[^:]+\.(svg|png)$/i);
-    if (components2)
-      string2 = `file:${components2[0]}`;
+    const components2 = string5.match(/^[^:]+\.(svg|png)$/i);
+    if (components2) string5 = `file:${components2[0]}`;
   }
-  if (isSingleEmoji(string2)) {
+  if (isSingleEmoji(string5)) {
     log("single emoji detected");
     return {
       ok: true,
       result: {
         prefix: "text",
-        payload: string2,
+        payload: string5,
         modifiers: {}
       }
     };
   }
-  const components = string2.match(/^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/is);
+  const components = string5.match(
+    /^((?:[0-9a-z_=+-]+ +)*)(\S{1,3}|\S \S|[a-z]+:.*)$/is
+  );
   if (!components) {
     return {
       ok: false,
-      error: `invalid icon string: '${string2}'`
+      error: `invalid icon string: '${string5}'`
     };
   }
   const modifiers = parseModifierString(components[1].trim());
@@ -260,8 +265,8 @@ function parseModifierString(modifiers) {
   const result = {};
   if (modifiers.length > 0) {
     for (const str of modifiers.split(" ")) {
-      const regex = /^([a-z_-]+)(?:=([+-]?[0-9a-z]{0,6}))?$/i;
-      const components = str.match(regex);
+      const regex2 = /^([a-z_-]+)(?:=([+-]?[0-9a-z]{0,6}))?$/i;
+      const components = str.match(regex2);
       if (components && components.length === 3) {
         result[standardizeKey(components[1])] = components[2] ?? true;
       }
@@ -269,6 +274,7 @@ function parseModifierString(modifiers) {
   }
   return result;
 }
+
 // src/loader.ts
 import * as v4 from "valibot";
 
@@ -279,7 +285,13 @@ import * as v3 from "valibot";
 var VConfigObject = v3.record(v3.string(), v3.unknown());
 function parsePlistObject(plist) {
   try {
-    return v3.parse(VConfigObject, parsePlist(plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")));
+    return v3.parse(
+      VConfigObject,
+      parsePlist(
+        // remove any Credits array, as there are invalid ones out there
+        plist.replace(/<key>Credits<\/key>\s*<array>[\s\S]*?<\/array>/, "")
+      )
+    );
   } catch (e) {
     if (e instanceof v3.ValiError) {
       throw new Error(`Invalid config: ${e.message}`);
@@ -305,7 +317,10 @@ function parseJsonObject(jsonSource) {
 }
 function parseYamlObject(yamlSource) {
   try {
-    return v3.parse(VConfigObject, parseYaml(yamlSource, { schema: JSON_SCHEMA }));
+    return v3.parse(
+      VConfigObject,
+      parseYaml(yamlSource, { schema: JSON_SCHEMA })
+    );
   } catch (e) {
     if (e instanceof v3.ValiError) {
       throw new Error(`Invalid config: ${e.message}`);
@@ -318,32 +333,33 @@ function parseYamlObject(yamlSource) {
 }
 
 // src/snippet.ts
-function lines(string3) {
-  return string3.split(/\r\n|\n|\r/);
+function lines(string5) {
+  return string5.split(/\r\n|\n|\r/);
 }
-function extractPrefixedBlock(string3, prefix) {
+function extractPrefixedBlock(string5, prefix) {
   if (prefix === "") {
-    return string3;
+    return string5;
   }
   const result = [];
-  for (const line of lines(string3)) {
+  for (const line of lines(string5)) {
     if (line.startsWith(prefix)) {
       result.push(line.slice(prefix.length));
     } else {
       break;
     }
   }
-  return result.join(`
-`);
+  return result.join("\n");
 }
-function candidateYaml(string3) {
-  const found = string3.match(/# ?popclip(?=[\s\S])/i);
-  if (!found || found.index === undefined) {
+function candidateYaml(string5) {
+  const found = string5.match(/# ?popclip(?=[\s\S])/i);
+  if (!found || found.index === void 0) {
     return null;
   }
-  const lineStart = string3.lastIndexOf(`
-`, found.index) + 1;
-  const candidateYaml2 = extractPrefixedBlock(string3.slice(lineStart), string3.slice(lineStart, found.index));
+  const lineStart = string5.lastIndexOf("\n", found.index) + 1;
+  const candidateYaml2 = extractPrefixedBlock(
+    string5.slice(lineStart),
+    string5.slice(lineStart, found.index)
+  );
   if (!/name"\s*:|name:\s+/is.test(candidateYaml2)) {
     return null;
   }
@@ -390,10 +406,8 @@ function embedTypeFromText(text, yaml, config) {
 function hasTabsInBlock(yamlSource) {
   for (const line of lines(yamlSource)) {
     const parts = line.split("{");
-    if (parts[0].includes("\t"))
-      return true;
-    if (parts.length > 1)
-      break;
+    if (parts[0].includes("	")) return true;
+    if (parts.length > 1) break;
   }
   return false;
 }
@@ -476,10 +490,12 @@ function loadSnippet(text, fileName) {
 }
 
 // src/loader.ts
-var VConfigFiles = v4.array(v4.object({
-  name: v4.string(),
-  contents: v4.string()
-}));
+var VConfigFiles = v4.array(
+  v4.object({
+    name: v4.string(),
+    contents: v4.string()
+  })
+);
 var plistConfigFileName = "Config.plist";
 var jsonConfigFileName = "Config.json";
 var yamlConfigFileName = "Config.yaml";
@@ -494,12 +510,9 @@ function loadStaticConfig(obj) {
   configFiles.sort((a, b) => {
     const aIndex = configFileNames.indexOf(a.name);
     const bIndex = configFileNames.indexOf(b.name);
-    if (aIndex < 0 && bIndex < 0)
-      return a.name.localeCompare(b.name, "en");
-    if (aIndex < 0)
-      return 1;
-    if (bIndex < 0)
-      return -1;
+    if (aIndex < 0 && bIndex < 0) return a.name.localeCompare(b.name, "en");
+    if (aIndex < 0) return 1;
+    if (bIndex < 0) return -1;
     return aIndex - bIndex;
   });
   for (const cfg of configFiles) {
@@ -521,18 +534,25 @@ function loadStaticConfig(obj) {
   }
   return result;
 }
+
 // src/summary.ts
 import * as v6 from "valibot";
 
 // src/validate.ts
 import * as v5 from "valibot";
 function required(schema, message) {
-  const outputSchema = v5.pipe(v5.optional(schema, () => {
-    return;
-  }), v5.nonOptional(schema, message), schema);
+  const outputSchema = v5.pipe(
+    v5.optional(schema, () => void 0),
+    v5.nonOptional(schema, message),
+    schema
+  );
   return outputSchema;
 }
-var SaneStringSchema = v5.pipe(v5.string(), v5.minLength(1), v5.maxLength(500));
+var SaneStringSchema = v5.pipe(
+  v5.string(),
+  v5.minLength(1),
+  v5.maxLength(500)
+);
 var SaneStringAllowingEmptySchema = v5.pipe(v5.string(), v5.maxLength(500));
 var LongStringSchema = v5.pipe(v5.string(), v5.minLength(1), v5.maxLength(1e4));
 var StringTableSchema = v5.intersect([
@@ -545,9 +565,24 @@ var LocalizableStringSchema = v5.union([
   SaneStringSchema,
   StringTableSchema
 ]);
-var IdentifierSchema = v5.pipe(v5.string(), v5.minLength(1), v5.maxLength(100), v5.regex(/^[a-z0-9]+([._-][a-z0-9]+)*$/i, "Invalid identifier (allowed: [a-zA-Z0-9]+, separated by [._-])"));
-var VersionNumberSchema = v5.pipe(v5.number("Must be a number"), v5.safeInteger("Must be an integer"), v5.minValue(1));
-var VersionStringSchema = v5.pipe(v5.string("Must be a string"), v5.regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, "Bad format"));
+var IdentifierSchema = v5.pipe(
+  v5.string(),
+  v5.minLength(1),
+  v5.maxLength(100),
+  v5.regex(
+    /^[a-z0-9]+([._-][a-z0-9]+)*$/i,
+    "Invalid identifier (allowed: [a-zA-Z0-9]+, separated by [._-])"
+  )
+);
+var VersionNumberSchema = v5.pipe(
+  v5.number("Must be a number"),
+  v5.safeInteger("Must be an integer"),
+  v5.minValue(1)
+);
+var VersionStringSchema = v5.pipe(
+  v5.string("Must be a string"),
+  v5.regex(/^[0-9]+(\.[0-9]+)(\.[0-9]+)?$/, "Bad format")
+);
 var IconSchema = v5.union([LongStringSchema, v5.null_(), v5.literal(false)]);
 var AppSchema = v5.object({
   name: required(SaneStringSchema, "App name is required"),
@@ -563,7 +598,9 @@ var OptionSchema = v5.object({
   description: v5.optional(LocalizableStringSchema),
   values: v5.optional(v5.array(SaneStringAllowingEmptySchema)),
   "value labels": v5.optional(v5.array(LocalizableStringSchema)),
-  "default value": v5.optional(v5.union([SaneStringAllowingEmptySchema, v5.boolean()])),
+  "default value": v5.optional(
+    v5.union([SaneStringAllowingEmptySchema, v5.boolean()])
+  ),
   hidden: v5.optional(v5.boolean()),
   inset: v5.optional(v5.boolean()),
   multiline: v5.optional(v5.boolean()),
@@ -572,19 +609,32 @@ var OptionSchema = v5.object({
   icon: v5.optional(IconSchema),
   ...IconModifiersSchema.entries
 });
-var KeyCodeSchema = v5.pipe(v5.number(), v5.safeInteger(), v5.minValue(0), v5.maxValue(127));
+var KeyCodeSchema = v5.pipe(
+  v5.number(),
+  v5.safeInteger(),
+  v5.minValue(0),
+  v5.maxValue(127)
+);
 var KeyComboSchema = v5.union([
   KeyCodeSchema,
   SaneStringSchema,
-  v5.pipe(v5.object({
-    "key code": v5.optional(KeyCodeSchema),
-    "key char": v5.optional(v5.pipe(v5.string(), v5.minLength(1), v5.maxLength(1))),
-    modifiers: required(v5.pipe(v5.number(), v5.safeInteger(), v5.minValue(0)), "'modifiers' is required")
-  }), v5.check((obj) => {
-    const hasKeyCode = obj["key code"] !== undefined;
-    const hasKeyChar = obj["key char"] !== undefined;
-    return (hasKeyCode || hasKeyChar) && !(hasKeyCode && hasKeyChar);
-  }, "One of 'key code' or 'key char' is required"))
+  v5.pipe(
+    v5.object({
+      "key code": v5.optional(KeyCodeSchema),
+      "key char": v5.optional(
+        v5.pipe(v5.string(), v5.minLength(1), v5.maxLength(1))
+      ),
+      modifiers: required(
+        v5.pipe(v5.number(), v5.safeInteger(), v5.minValue(0)),
+        "'modifiers' is required"
+      )
+    }),
+    v5.check((obj) => {
+      const hasKeyCode = obj["key code"] !== void 0;
+      const hasKeyChar = obj["key char"] !== void 0;
+      return (hasKeyCode || hasKeyChar) && !(hasKeyCode && hasKeyChar);
+    }, "One of 'key code' or 'key char' is required")
+  )
 ]);
 var ActionCoreSchema = v5.object({
   title: v5.optional(LocalizableStringSchema),
@@ -607,10 +657,13 @@ var REQUIREMENT_KEYWORDS = [
   "path",
   "html"
 ];
-var RequirementSchema = v5.pipe(SaneStringSchema, v5.check((value) => {
-  const bare = value.startsWith("!") ? value.slice(1) : value;
-  return REQUIREMENT_KEYWORDS.includes(bare) || /^option-[^=]+=/.test(bare);
-}, "Invalid requirement (a keyword, !keyword, or option-<identifier>=<value>)"));
+var RequirementSchema = v5.pipe(
+  SaneStringSchema,
+  v5.check((value) => {
+    const bare = value.startsWith("!") ? value.slice(1) : value;
+    return REQUIREMENT_KEYWORDS.includes(bare) || /^option-[^=]+=/.test(bare);
+  }, "Invalid requirement (a keyword, !keyword, or option-<identifier>=<value>)")
+);
 var BEFORE_STEPS = ["copy", "cut", "paste", "paste-plain"];
 var AFTER_STEPS = [
   ...BEFORE_STEPS,
@@ -638,6 +691,10 @@ var ActionFlagsSchema = v5.object({
   permissions: v5.optional(v5.array(SaneStringSchema)),
   "show as": v5.optional(v5.picklist(["icon", "text"])),
   color: v5.optional(SaneStringSchema),
+  /* Menu presentation hints. Preferences, not commands: PopClip may ignore either, and where
+   several ask, the first in popup order wins. "wants primary display" asks to be the button
+   centred above the pointer; "wants initial display" asks that an action's submenu already be
+   open when the popup appears. */
   "wants primary display": v5.optional(v5.boolean()),
   "wants initial display": v5.optional(v5.boolean())
 });
@@ -655,16 +712,20 @@ var UrlActionSchema = v5.object({
 var KeyComboActionSchema = v5.object({
   "key combo": v5.optional(KeyComboSchema),
   "key combos": v5.optional(v5.array(KeyComboSchema)),
+  // Where PopClip posts the key events: to the session event tap ("session", the default), to the
+  // process of the app the action is acting on ("app"), or to the HID event tap ("hid").
   "key combo target": v5.optional(v5.picklist(["session", "app", "hid"]))
 });
 var AppleScriptActionSchema = v5.object({
   applescript: v5.optional(LongStringSchema),
   "applescript file": v5.optional(SaneStringSchema),
-  "applescript call": v5.optional(v5.object({
-    file: v5.optional(SaneStringSchema),
-    handler: required(SaneStringSchema, "Handler name is required"),
-    parameters: v5.optional(v5.array(SaneStringSchema))
-  }))
+  "applescript call": v5.optional(
+    v5.object({
+      file: v5.optional(SaneStringSchema),
+      handler: required(SaneStringSchema, "Handler name is required"),
+      parameters: v5.optional(v5.array(SaneStringSchema))
+    })
+  )
 });
 var ShellScriptActionSchema = v5.object({
   "shell script": v5.optional(LongStringSchema),
@@ -677,7 +738,9 @@ var JavaScriptActionSchema = v5.object({
   "javascript file": v5.optional(SaneStringSchema)
 });
 var MenuNodeSchema = v5.object({
-  submenu: v5.optional(v5.array(v5.lazy(() => ActionSchema))),
+  submenu: v5.optional(
+    v5.array(v5.lazy(() => ActionSchema))
+  ),
   separator: v5.optional(v5.boolean())
 });
 var ActionSchema = v5.object({
@@ -702,11 +765,16 @@ var ExtensionCoreSchema = v5.object({
   entitlements: v5.optional(v5.array(SaneStringSchema)),
   "offers multiple instances": v5.optional(v5.boolean()),
   "auth service label": v5.optional(LocalizableStringSchema),
+  /* Extensions Directory submission requirement: an extension with a static
+   shell script action must explain why a shell script is needed. */
   "shell script rationale": v5.optional(LongStringSchema),
+  // module
   module: v5.optional(v5.union([SaneStringSchema, v5.literal(true)])),
   language: v5.optional(SaneStringSchema),
+  // actions
   action: v5.optional(ActionSchema),
   actions: v5.optional(v5.array(ActionSchema)),
+  // options
   options: v5.optional(v5.array(OptionSchema)),
   "options title": v5.optional(LocalizableStringSchema),
   "options script file": v5.optional(SaneStringSchema)
@@ -752,7 +820,9 @@ var ExtensionsSummarySchema = v6.object({
   icon: v6.optional(IconComponentsSchema),
   actionTypes: v6.array(ActionTypeSchema),
   entitlements: v6.optional(v6.array(SaneStringSchema)),
-  apps: v6.optional(v6.array(v6.object({ name: SaneStringSchema, link: SaneStringSchema }))),
+  apps: v6.optional(
+    v6.array(v6.object({ name: SaneStringSchema, link: SaneStringSchema }))
+  ),
   macosVersion: v6.optional(SaneStringSchema),
   popclipVersion: v6.optional(VersionNumberSchema)
 });
@@ -764,12 +834,11 @@ function flattenActionNodes(roots) {
   const stack = [...roots].reverse();
   while (stack.length > 0) {
     const node = stack.pop();
-    if (!node || typeof node !== "object")
-      continue;
+    if (!node || typeof node !== "object") continue;
     const action = node;
     result.push(action);
     if (Array.isArray(action.submenu)) {
-      for (let i = action.submenu.length - 1;i >= 0; i--) {
+      for (let i = action.submenu.length - 1; i >= 0; i--) {
         stack.push(action.submenu[i]);
       }
     }
@@ -791,7 +860,7 @@ function extractSummary(config) {
       }
     }
   })();
-  const actionTypesSet = new Set;
+  const actionTypesSet = /* @__PURE__ */ new Set();
   if (config.module) {
     actionTypesSet.add("javascript");
   } else {
@@ -825,20 +894,20 @@ function extractSummary(config) {
     description: normalizeLocalizedString(config.description),
     keywords: config.keywords,
     icon,
-    entitlements: config.entitlements?.length ? config.entitlements : undefined,
-    apps: apps.length ? apps : undefined,
+    entitlements: config.entitlements?.length ? config.entitlements : void 0,
+    apps: apps.length ? apps : void 0,
     macosVersion: config["macos version"],
     popclipVersion: config["popclip version"]
   });
 }
 export {
-  validateStaticConfig,
-  standardizeKey,
-  standardizeIcon,
-  standardizeConfig,
-  loadStaticConfig,
-  isSingleEmoji,
-  extractSummary,
+  configFromText,
   descriptorStringFromComponents,
-  configFromText
+  extractSummary,
+  isSingleEmoji,
+  loadStaticConfig,
+  standardizeConfig,
+  standardizeIcon,
+  standardizeKey,
+  validateStaticConfig
 };
