@@ -607,6 +607,7 @@ var OptionSchema = v5.object({
   multiline: v5.optional(v5.boolean()),
   "allow other": v5.optional(v5.boolean()),
   "allow none": v5.optional(v5.boolean()),
+  "migrate from": v5.optional(IdentifierSchema),
   icon: v5.optional(IconSchema),
   ...IconModifiersSchema.entries
 });

@@ -84,6 +84,7 @@ const OptionSchema = v.object({
   multiline: v.optional(v.boolean()),
   "allow other": v.optional(v.boolean()),
   "allow none": v.optional(v.boolean()),
+  "migrate from": v.optional(IdentifierSchema),
   icon: v.optional(IconSchema),
   ...IconModifiersSchema.entries,
 });
