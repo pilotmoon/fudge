@@ -733,7 +733,12 @@ var ShellScriptActionSchema = v5.object({
   "shell script": v5.optional(LongStringSchema),
   "shell script file": v5.optional(SaneStringSchema),
   interpreter: v5.optional(SaneStringSchema),
-  stdin: v5.optional(SaneStringSchema)
+  stdin: v5.optional(SaneStringSchema),
+  /* How the run is executed: through the user's shell as a login shell (-lc) or non-login
+   shell (-c), or with no shell at all ("none": the interpreter or shebang file is executed
+   directly). Unspecified means login, or nonlogin when the user has set the legacy
+   NoLoginShell defaults key. */
+  "shell mode": v5.optional(v5.picklist(["login", "nonlogin", "none"]))
 });
 var JavaScriptActionSchema = v5.object({
   javascript: v5.optional(LongStringSchema),

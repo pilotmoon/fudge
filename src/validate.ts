@@ -230,6 +230,11 @@ const ShellScriptActionSchema = v.object({
   "shell script file": v.optional(SaneStringSchema),
   interpreter: v.optional(SaneStringSchema),
   stdin: v.optional(SaneStringSchema),
+  /* How the run is executed: through the user's shell as a login shell (-lc) or non-login
+   shell (-c), or with no shell at all ("none": the interpreter or shebang file is executed
+   directly). Unspecified means login, or nonlogin when the user has set the legacy
+   NoLoginShell defaults key. */
+  "shell mode": v.optional(v.picklist(["login", "nonlogin", "none"])),
 });
 
 const JavaScriptActionSchema = v.object({
