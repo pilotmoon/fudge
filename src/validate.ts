@@ -85,6 +85,10 @@ const OptionSchema = v.object({
   "allow other": v.optional(v.boolean()),
   "allow none": v.optional(v.boolean()),
   "migrate from": v.optional(IdentifierSchema),
+  // Secret options only: which keychain the item goes in — the synchronizable
+  // keychain ("sync", default, shared via iCloud Keychain) or the local
+  // keychain ("local", this Mac only).
+  keychain: v.optional(v.picklist(["sync", "local"])),
   icon: v.optional(IconSchema),
   ...IconModifiersSchema.entries,
 });
@@ -272,6 +276,9 @@ const ExtensionCoreSchema = v.object({
   entitlements: v.optional(v.array(SaneStringSchema)),
   "offers multiple instances": v.optional(v.boolean()),
   "auth service label": v.optional(LocalizableStringSchema),
+  // Which keychain the sign-in secret (authsecret) goes in — as the per-option
+  // `keychain` key, for the one secret that has no declared option.
+  "auth keychain": v.optional(v.picklist(["sync", "local"])),
   /* Extensions Directory submission requirement: an extension with a static
    shell script action must explain why a shell script is needed. */
   "shell script rationale": v.optional(LongStringSchema),
