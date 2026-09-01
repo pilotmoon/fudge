@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
+    "test": "npm run build && node --test",
     "build": "npm run check && esbuild index.ts --bundle --outfile=index.js --platform=node --format=esm --external:case-anything --external:js-yaml --external:fast-plist --external:valibot --external:emoji-regex",
     "watch": "esbuild index.ts --bundle --outfile=index.js --platform=node --format=esm --external:case-anything --external:js-yaml --external:fast-plist --external:valibot --external:emoji-regex --watch"
   },

@@ -283,8 +283,8 @@ const ExtensionCoreSchema = v.object({
    shell script action must explain why a shell script is needed. */
   "shell script rationale": v.optional(LongStringSchema),
 
-  // module
-  module: v.optional(v.union([SaneStringSchema, v.literal(true)])),
+  // module (false is the snippet module-inference opt-out)
+  module: v.optional(v.union([SaneStringSchema, v.boolean()])),
   language: v.optional(SaneStringSchema),
 
   // actions

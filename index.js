@@ -333,6 +333,205 @@ function parseYamlObject(yamlSource) {
   }
 }
 
+// src/sniff.ts
+var MODULE_GLOBALS = /* @__PURE__ */ new Set(["exports", "module", "define", "defineExtension"]);
+var NON_EXPRESSION_KEYWORDS = /* @__PURE__ */ new Set([
+  "return",
+  "typeof",
+  "instanceof",
+  "in",
+  "of",
+  "new",
+  "delete",
+  "void",
+  "throw",
+  "do",
+  "else",
+  "case",
+  "yield",
+  "await"
+]);
+function isIdStart(c) {
+  return /[A-Za-z_$]/.test(c);
+}
+function isIdChar(c) {
+  return /[A-Za-z0-9_$]/.test(c);
+}
+function endsExpression(token) {
+  if (token === ")" || token === "]") {
+    return true;
+  }
+  if (isIdStart(token[0] ?? "") || /[0-9]/.test(token[0] ?? "")) {
+    return !NON_EXPRESSION_KEYWORDS.has(token);
+  }
+  return false;
+}
+function sniffModule(source) {
+  const n = source.length;
+  let i = 0;
+  let prevToken = "";
+  let braceDepth = 0;
+  const templateStack = [];
+  function scanTemplate() {
+    i++;
+    while (i < n) {
+      const c = source[i];
+      if (c === "\\") {
+        i += 2;
+        continue;
+      }
+      if (c === "`") {
+        i++;
+        return false;
+      }
+      if (c === "$" && source[i + 1] === "{") {
+        i += 2;
+        return true;
+      }
+      i++;
+    }
+    return false;
+  }
+  function scanString(quote) {
+    i++;
+    while (i < n) {
+      const c = source[i];
+      if (c === "\\") {
+        i += 2;
+        continue;
+      }
+      i++;
+      if (c === quote || c === "\n" || c === "\r") {
+        return;
+      }
+    }
+  }
+  function scanRegex() {
+    i++;
+    let inClass = false;
+    while (i < n) {
+      const c = source[i];
+      if (c === "\\") {
+        i += 2;
+        continue;
+      }
+      if (c === "\n" || c === "\r") {
+        return;
+      }
+      i++;
+      if (c === "[") {
+        inClass = true;
+      } else if (c === "]") {
+        inClass = false;
+      } else if (c === "/" && !inClass) {
+        while (i < n && isIdChar(source[i])) {
+          i++;
+        }
+        return;
+      }
+    }
+  }
+  function nextChar(j) {
+    while (j < n && /\s/.test(source[j])) {
+      j++;
+    }
+    return source[j] ?? "";
+  }
+  while (i < n) {
+    const c = source[i];
+    if (/\s/.test(c)) {
+      i++;
+      continue;
+    }
+    if (c === "/") {
+      const d = source[i + 1];
+      if (d === "/") {
+        while (i < n && source[i] !== "\n" && source[i] !== "\r") {
+          i++;
+        }
+      } else if (d === "*") {
+        const close = source.indexOf("*/", i + 2);
+        i = close === -1 ? n : close + 2;
+      } else if (endsExpression(prevToken)) {
+        i++;
+        prevToken = "/";
+      } else {
+        scanRegex();
+        prevToken = ")";
+      }
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      scanString(c);
+      prevToken = ")";
+      continue;
+    }
+    if (c === "`") {
+      if (scanTemplate()) {
+        templateStack.push(braceDepth);
+      } else {
+        prevToken = ")";
+      }
+      continue;
+    }
+    if (c === "{") {
+      braceDepth++;
+      i++;
+      prevToken = "{";
+      continue;
+    }
+    if (c === "}") {
+      if (templateStack.length > 0 && templateStack[templateStack.length - 1] === braceDepth) {
+        templateStack.pop();
+        if (scanTemplate()) {
+          templateStack.push(braceDepth);
+        } else {
+          prevToken = ")";
+        }
+      } else {
+        braceDepth = Math.max(0, braceDepth - 1);
+        i++;
+        prevToken = "}";
+      }
+      continue;
+    }
+    if (isIdStart(c)) {
+      let j = i + 1;
+      while (j < n && isIdChar(source[j])) {
+        j++;
+      }
+      const word = source.slice(i, j);
+      if (prevToken !== "." && prevToken !== "#") {
+        if (word === "export") {
+          const next = nextChar(j);
+          if (next === "{" || next === "*" || isIdStart(next)) {
+            return true;
+          }
+        } else if (MODULE_GLOBALS.has(word)) {
+          if (nextChar(j) !== ":") {
+            return true;
+          }
+        }
+      }
+      prevToken = word;
+      i = j;
+      continue;
+    }
+    if (/[0-9]/.test(c)) {
+      let j = i + 1;
+      while (j < n && /[0-9A-Za-z_$.]/.test(source[j])) {
+        j++;
+      }
+      prevToken = source.slice(i, j);
+      i = j;
+      continue;
+    }
+    i++;
+    prevToken = c;
+  }
+  return false;
+}
+
 // src/snippet.ts
 function lines(string5) {
   return string5.split(/\r\n|\n|\r/);
@@ -357,28 +556,45 @@ function candidateYaml(string5) {
     return null;
   }
   const lineStart = string5.lastIndexOf("\n", found.index) + 1;
-  const candidateYaml2 = extractPrefixedBlock(
-    string5.slice(lineStart),
-    string5.slice(lineStart, found.index)
-  );
+  const prefix = string5.slice(lineStart, found.index);
+  const candidateYaml2 = extractPrefixedBlock(string5.slice(lineStart), prefix);
   if (!/name"\s*:|name:\s+/is.test(candidateYaml2)) {
     return null;
   }
-  return candidateYaml2.replace(/\u00A0/g, " ").trim();
+  return { yaml: candidateYaml2.replace(/\u00A0/g, " ").trim(), prefix };
 }
-function embedTypeFromText(text, yaml, config) {
+function languageForSuffix(suffix) {
+  switch (suffix.toLowerCase()) {
+    case "js":
+      return "javascript";
+    case "ts":
+      return "typescript";
+    case "applescript":
+      return "applescript";
+    default:
+      return "";
+  }
+}
+function embedTypeFromText(text, yaml, prefix, config, externalLanguage) {
   let result = "unknown" /* Unknown */;
   let { module, language, interpreter } = config;
   if (typeof module === "string") {
     throw new Error("In a snippet, 'module' must be a boolean");
   }
-  module = typeof module === "boolean" ? module : false;
   language = typeof language === "string" ? standardizeKey(language) : "";
   interpreter = typeof interpreter === "string" ? interpreter : "";
+  language = externalLanguage || language;
+  const hasAdditionalContent = lines(text.trim()).length > lines(yaml.trim()).length;
+  if (hasAdditionalContent && !language && !interpreter && !text.startsWith("#!") && prefix.trimStart().startsWith("//")) {
+    language = "typescript";
+  }
+  const isJsFamily = language === "javascript" || language === "typescript";
+  if (typeof module !== "boolean") {
+    module = hasAdditionalContent && isJsFamily && sniffModule(text);
+  }
   if (module && !language) {
     throw new Error("A 'language' is needed with 'module'");
   }
-  const hasAdditionalContent = lines(text.trim()).length > lines(yaml.trim()).length;
   if (hasAdditionalContent) {
     if (language === "javascript") {
       if (module) {
@@ -416,15 +632,22 @@ function forceString(val) {
   return typeof val === "string" ? val : "";
 }
 function configFromText(text, externalSuffix = "") {
-  const yaml = candidateYaml(text);
-  if (yaml === null) {
+  const candidate = candidateYaml(text);
+  if (candidate === null) {
     return null;
   }
+  const { yaml, prefix } = candidate;
   if (hasTabsInBlock(yaml)) {
     throw new Error("Don't use tabs in YAML");
   }
   const config = standardizeConfig(parseYamlObject(yaml));
-  const embedType = embedTypeFromText(text, yaml, config);
+  const embedType = embedTypeFromText(
+    text,
+    yaml,
+    prefix,
+    config,
+    languageForSuffix(forceString(externalSuffix))
+  );
   let suffix = forceString(suffixForEmbedType(embedType));
   suffix ||= forceString(externalSuffix);
   suffix ||= forceString(config.suffix);
@@ -475,7 +698,9 @@ function selfReferenceFieldNameForEmbedType(embedType) {
 }
 function loadSnippet(text, fileName) {
   try {
-    const { config, embedType } = configFromText(text) ?? {
+    const dot = fileName.lastIndexOf(".");
+    const suffix = dot > 0 ? fileName.slice(dot + 1) : "";
+    const { config, embedType } = configFromText(text, suffix) ?? {
       config: {},
       embedType: "unknown" /* Unknown */
     };
@@ -782,8 +1007,8 @@ var ExtensionCoreSchema = v5.object({
   /* Extensions Directory submission requirement: an extension with a static
    shell script action must explain why a shell script is needed. */
   "shell script rationale": v5.optional(LongStringSchema),
-  // module
-  module: v5.optional(v5.union([SaneStringSchema, v5.literal(true)])),
+  // module (false is the snippet module-inference opt-out)
+  module: v5.optional(v5.union([SaneStringSchema, v5.boolean()])),
   language: v5.optional(SaneStringSchema),
   // actions
   action: v5.optional(ActionSchema),
@@ -919,6 +1144,7 @@ export {
   descriptorStringFromComponents,
   extractSummary,
   isSingleEmoji,
+  loadSnippet,
   loadStaticConfig,
   standardizeConfig,
   standardizeIcon,
