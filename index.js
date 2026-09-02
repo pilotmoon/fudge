@@ -585,8 +585,13 @@ function embedTypeFromText(text, yaml, prefix, config, externalLanguage) {
   interpreter = typeof interpreter === "string" ? interpreter : "";
   language = externalLanguage || language;
   const hasAdditionalContent = lines(text.trim()).length > lines(yaml.trim()).length;
-  if (hasAdditionalContent && !language && !interpreter && !text.startsWith("#!") && prefix.trimStart().startsWith("//")) {
-    language = "typescript";
+  if (hasAdditionalContent && !language && !interpreter && !text.startsWith("#!")) {
+    const trimmedPrefix = prefix.trimStart();
+    if (trimmedPrefix.startsWith("//")) {
+      language = "typescript";
+    } else if (trimmedPrefix.startsWith("--")) {
+      language = "applescript";
+    }
   }
   const isJsFamily = language === "javascript" || language === "typescript";
   if (typeof module !== "boolean") {

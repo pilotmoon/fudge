@@ -71,15 +71,28 @@ describe("language inference", () => {
   );
   check("hash prefix does not infer", "# #popclip\n# name: Test\necho hi", "unknown");
   check(
-    "applescript prefix does not infer",
-    "-- #popclip\n-- name: Test\nsay hi",
-    "unknown",
+    "applescript prefix infers applescript",
+    '-- #popclip\n-- name: Test\nsay "hi"',
+    "applescript",
+    "applescript file",
   );
   check(
-    "explicit applescript",
+    "explicit applescript still works",
     "-- #popclip\n-- name: Test\n-- language: applescript\nsay hi",
     "applescript",
     "applescript file",
+  );
+  check(
+    "interpreter beats applescript prefix",
+    "-- #popclip\n-- name: Test\n-- interpreter: lua\nprint('hi')",
+    "shell script",
+    "shell script file",
+  );
+  check(
+    "shebang beats applescript prefix",
+    "#!/usr/bin/env lua\n-- #popclip\n-- name: Test\nprint('hi')",
+    "executable shell script",
+    "shell script file",
   );
   check("indented // prefix infers", "  // #popclip\n  // name: Test\nx()", "typescript");
 });

@@ -104,17 +104,24 @@ function embedTypeFromText(
   const hasAdditionalContent =
     lines(text.trim()).length > lines(yaml.trim()).length;
 
-  // a code body under a //-comment header, with nothing else claiming it,
-  // is TypeScript (which is also how plain JavaScript loads fine, since the
-  // transpiler is transpile-only). precedence: language > interpreter > #!
+  // the header's comment prefix implies the language of a code body that
+  // nothing else claims: // means TypeScript (which is also how plain
+  // JavaScript loads fine, since the transpiler is transpile-only), and --
+  // means AppleScript. Other languages with -- comments (Lua, SQL...) can
+  // only run as shell scripts, so they carry `interpreter`, which wins here.
+  // precedence: language > interpreter > #! > prefix
   if (
     hasAdditionalContent &&
     !language &&
     !interpreter &&
-    !text.startsWith("#!") &&
-    prefix.trimStart().startsWith("//")
+    !text.startsWith("#!")
   ) {
-    language = "typescript";
+    const trimmedPrefix = prefix.trimStart();
+    if (trimmedPrefix.startsWith("//")) {
+      language = "typescript";
+    } else if (trimmedPrefix.startsWith("--")) {
+      language = "applescript";
+    }
   }
 
   // absent an explicit 'module' boolean, module-ness of a JS-family body is
