@@ -334,7 +334,6 @@ function parseYamlObject(yamlSource) {
 }
 
 // src/sniff.ts
-var MODULE_GLOBALS = /* @__PURE__ */ new Set(["exports", "module", "define", "defineExtension"]);
 var NON_EXPRESSION_KEYWORDS = /* @__PURE__ */ new Set([
   "return",
   "typeof",
@@ -366,7 +365,7 @@ function endsExpression(token) {
   }
   return false;
 }
-function sniffModule(source) {
+function scanTokens(source, callbacks) {
   const n = source.length;
   let i = 0;
   let prevToken = "";
@@ -393,7 +392,7 @@ function sniffModule(source) {
     return false;
   }
   function scanString(quote) {
-    i++;
+    const start = ++i;
     while (i < n) {
       const c = source[i];
       if (c === "\\") {
@@ -401,10 +400,14 @@ function sniffModule(source) {
         continue;
       }
       i++;
-      if (c === quote || c === "\n" || c === "\r") {
-        return;
+      if (c === quote) {
+        return source.slice(start, i - 1);
+      }
+      if (c === "\n" || c === "\r") {
+        return source.slice(start, i - 1);
       }
     }
+    return source.slice(start, n);
   }
   function scanRegex() {
     i++;
@@ -431,9 +434,15 @@ function sniffModule(source) {
       }
     }
   }
-  function nextChar(j) {
+  function nextFrom(j, k) {
     while (j < n && /\s/.test(source[j])) {
       j++;
+    }
+    if (k === 2) {
+      j++;
+      while (j < n && /\s/.test(source[j])) {
+        j++;
+      }
     }
     return source[j] ?? "";
   }
@@ -454,6 +463,9 @@ function sniffModule(source) {
         i = close === -1 ? n : close + 2;
       } else if (endsExpression(prevToken)) {
         i++;
+        if (callbacks.punct?.("/", prevToken)) {
+          return true;
+        }
         prevToken = "/";
       } else {
         scanRegex();
@@ -462,7 +474,10 @@ function sniffModule(source) {
       continue;
     }
     if (c === "'" || c === '"') {
-      scanString(c);
+      const value = scanString(c);
+      if (callbacks.string?.(value, prevToken)) {
+        return true;
+      }
       prevToken = ")";
       continue;
     }
@@ -477,6 +492,9 @@ function sniffModule(source) {
     if (c === "{") {
       braceDepth++;
       i++;
+      if (callbacks.punct?.("{", prevToken)) {
+        return true;
+      }
       prevToken = "{";
       continue;
     }
@@ -491,6 +509,9 @@ function sniffModule(source) {
       } else {
         braceDepth = Math.max(0, braceDepth - 1);
         i++;
+        if (callbacks.punct?.("}", prevToken)) {
+          return true;
+        }
         prevToken = "}";
       }
       continue;
@@ -501,17 +522,9 @@ function sniffModule(source) {
         j++;
       }
       const word = source.slice(i, j);
-      if (prevToken !== "." && prevToken !== "#") {
-        if (word === "export") {
-          const next = nextChar(j);
-          if (next === "{" || next === "*" || isIdStart(next)) {
-            return true;
-          }
-        } else if (MODULE_GLOBALS.has(word)) {
-          if (nextChar(j) !== ":") {
-            return true;
-          }
-        }
+      const next = (k = 1) => nextFrom(j, k);
+      if (callbacks.word?.(word, prevToken, next)) {
+        return true;
       }
       prevToken = word;
       i = j;
@@ -522,14 +535,100 @@ function sniffModule(source) {
       while (j < n && /[0-9A-Za-z_$.]/.test(source[j])) {
         j++;
       }
-      prevToken = source.slice(i, j);
+      const number3 = source.slice(i, j);
+      if (callbacks.punct?.(number3, prevToken)) {
+        return true;
+      }
+      prevToken = number3;
       i = j;
       continue;
     }
     i++;
+    if (callbacks.punct?.(c, prevToken)) {
+      return true;
+    }
     prevToken = c;
   }
   return false;
+}
+var MODULE_GLOBALS = /* @__PURE__ */ new Set([
+  "exports",
+  "module",
+  "define",
+  "defineExtension"
+]);
+function sniffModule(source) {
+  return scanTokens(source, {
+    word(word, prev, next) {
+      if (prev === "." || prev === "#") {
+        return false;
+      }
+      if (word === "export") {
+        const c = next();
+        return c === "{" || c === "*" || isIdStart(c);
+      }
+      return MODULE_GLOBALS.has(word) && next() !== ":";
+    }
+  });
+}
+var NETWORK_GLOBALS = /* @__PURE__ */ new Set(["XMLHttpRequest"]);
+var NETWORK_MODULES = /* @__PURE__ */ new Set(["axios"]);
+var SCRIPT_METHODS = /* @__PURE__ */ new Set([
+  "runAppleScript",
+  "runAppleScriptFile",
+  "runShellScript",
+  "runShellScriptFile"
+]);
+function sniffEntitlements(source) {
+  const hits = /* @__PURE__ */ new Map();
+  function record3(entitlement, trigger) {
+    if (!hits.has(entitlement)) {
+      hits.set(entitlement, { entitlement, trigger });
+    }
+    return hits.size === 2;
+  }
+  let expectSpecifier = false;
+  scanTokens(source, {
+    word(word, prev, next) {
+      expectSpecifier = false;
+      if (prev === "#") {
+        return false;
+      }
+      if (word === "$") {
+        if (prev === ".") {
+          return false;
+        }
+        const c = next();
+        if (c === "`" || c === "(" && next(2) === "{") {
+          return record3("script", "$");
+        }
+        return false;
+      }
+      if (next() === ":") {
+        return false;
+      }
+      if (SCRIPT_METHODS.has(word)) {
+        return record3("script", word);
+      }
+      if (NETWORK_GLOBALS.has(word)) {
+        return record3("network", word);
+      }
+      return false;
+    },
+    punct(token, prev) {
+      expectSpecifier = token === "(" && (prev === "require" || prev === "import");
+      return false;
+    },
+    string(value, prev) {
+      const isSpecifier = expectSpecifier || prev === "from" || prev === "import";
+      expectSpecifier = false;
+      if (isSpecifier && NETWORK_MODULES.has(value)) {
+        return record3("network", value);
+      }
+      return false;
+    }
+  });
+  return [...hits.values()];
 }
 
 // src/snippet.ts
@@ -1151,6 +1250,7 @@ export {
   isSingleEmoji,
   loadSnippet,
   loadStaticConfig,
+  sniffEntitlements,
   standardizeConfig,
   standardizeIcon,
   standardizeKey,

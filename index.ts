@@ -5,7 +5,12 @@ export {
   standardizeIcon,
 } from "./src/icon.js";
 export { loadStaticConfig } from "./src/loader.js";
-export { configFromText, loadSnippet, type EmbedType } from "./src/snippet.js";
+export {
+  type EntitlementHit,
+  type SniffedEntitlement,
+  sniffEntitlements,
+} from "./src/sniff.js";
+export { configFromText, type EmbedType, loadSnippet } from "./src/snippet.js";
 export { standardizeConfig, standardizeKey } from "./src/std.js";
 export { extractSummary } from "./src/summary.js";
 export { validateStaticConfig } from "./src/validate.js";
