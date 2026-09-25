@@ -1041,11 +1041,6 @@ var ActionFlagsSchema = v5.object({
   before: v5.optional(v5.picklist(BEFORE_STEPS)),
   after: v5.optional(v5.picklist(AFTER_STEPS)),
   permissions: v5.optional(v5.array(SaneStringSchema)),
-  /* The whitespace contract. "trim": the action receives the selected text without its
-   leading and trailing whitespace, and Paste restores that whitespace around the result.
-   "exact": the exact selected text in, and the exact result pasted. Unspecified follows the
-   extension's declared PopClip version. */
-  whitespace: v5.optional(v5.picklist(["trim", "exact"])),
   "show as": v5.optional(v5.picklist(["icon", "text"])),
   color: v5.optional(SaneStringSchema),
   /* Menu presentation hints. Preferences, not commands: PopClip may ignore either, and where
@@ -1137,6 +1132,12 @@ var ExtensionCoreSchema = v5.object({
    users can override it per Action. Extension-level only: one Output selector cannot
    present several defaults. Unspecified means Show. */
   "default output": v5.optional(v5.picklist(["paste", "copy", "show"])),
+  /* The whitespace contract, for the whole extension (its actions and its population):
+   "trim" gives actions the selected text without its leading and trailing whitespace, and a
+   text Paste restores that whitespace around the result; "exact" gives the exact text in and
+   pastes the exact result. Unspecified follows the declared PopClip version. Extension-level
+   only, so every action and the population see the same text. */
+  whitespace: v5.optional(v5.picklist(["trim", "exact"])),
   // module (false is the snippet module-inference opt-out)
   module: v5.optional(v5.union([SaneStringSchema, v5.boolean()])),
   language: v5.optional(SaneStringSchema),
