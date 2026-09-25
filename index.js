@@ -1025,12 +1025,7 @@ var AFTER_STEPS = [
   "preview-result",
   "show-status",
   "copy-selection",
-  "popclip-appear",
-  /* Deliver the result through Output: the Action's saved Output preference, else the
-   extension's `default output`, else Show. The disposition-free step for script actions,
-   whose stdout or returned value is their only channel; results are plain text. The
-   *-result steps above keep their fixed dispositions. */
-  "output"
+  "popclip-appear"
 ];
 var ActionFlagsSchema = v5.object({
   app: v5.optional(AppSchema),
@@ -1138,10 +1133,9 @@ var ExtensionCoreSchema = v5.object({
   /* Extensions Directory submission requirement: an extension with a static
    shell script action must explain why a shell script is needed. */
   "shell script rationale": v5.optional(LongStringSchema),
-  /* The author's recommended Output disposition for every output source in the extension
-   (popclip.output calls and `after: output` steps); users can override it per Action.
-   Extension-level only: one Output selector cannot present several defaults. Unspecified
-   means Show. */
+  /* The author's recommended Output disposition for the extension's popclip.output calls;
+   users can override it per Action. Extension-level only: one Output selector cannot
+   present several defaults. Unspecified means Show. */
   "default output": v5.optional(v5.picklist(["paste", "copy", "show"])),
   // module (false is the snippet module-inference opt-out)
   module: v5.optional(v5.union([SaneStringSchema, v5.boolean()])),
