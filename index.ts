@@ -9,6 +9,7 @@ export {
   type EntitlementHit,
   type SniffedEntitlement,
   sniffEntitlements,
+  sniffOutput,
 } from "./src/sniff.js";
 export { configFromText, type EmbedType, loadSnippet } from "./src/snippet.js";
 export { standardizeConfig, standardizeKey } from "./src/std.js";

@@ -153,9 +153,7 @@ const RequirementSchema = v.pipe(
   SaneStringSchema,
   v.check((value) => {
     const bare = value.startsWith("!") ? value.slice(1) : value;
-    return (
-      REQUIREMENT_KEYWORDS.includes(bare) || /^option-[^=]+=/.test(bare)
-    );
+    return REQUIREMENT_KEYWORDS.includes(bare) || /^option-[^=]+=/.test(bare);
   }, "Invalid requirement (a keyword, !keyword, or option-<identifier>=<value>)"),
 );
 
@@ -169,6 +167,11 @@ const AFTER_STEPS = [
   "show-status",
   "copy-selection",
   "popclip-appear",
+  /* Deliver the result through Output: the Action's saved Output preference, else the
+   extension's `default output`, else Show. The disposition-free step for script actions,
+   whose stdout or returned value is their only channel; results are plain text. The
+   *-result steps above keep their fixed dispositions. */
+  "output",
 ] as const;
 
 const ActionFlagsSchema = v.object({
@@ -185,6 +188,9 @@ const ActionFlagsSchema = v.object({
   before: v.optional(v.picklist(BEFORE_STEPS)),
   after: v.optional(v.picklist(AFTER_STEPS)),
   permissions: v.optional(v.array(SaneStringSchema)),
+  /* Opt out of the whitespace contract: the action receives the exact selected text, and
+   Paste uses the exact result, with no boundary whitespace trimmed or restored. */
+  "raw text": v.optional(v.boolean()),
   "show as": v.optional(v.picklist(["icon", "text"])),
   color: v.optional(SaneStringSchema),
   /* Menu presentation hints. Preferences, not commands: PopClip may ignore either, and where
@@ -282,6 +288,11 @@ const ExtensionCoreSchema = v.object({
   /* Extensions Directory submission requirement: an extension with a static
    shell script action must explain why a shell script is needed. */
   "shell script rationale": v.optional(LongStringSchema),
+  /* The author's recommended Output disposition for every output source in the extension
+   (popclip.output calls and `after: output` steps); users can override it per Action.
+   Extension-level only: one Output selector cannot present several defaults. Unspecified
+   means Show. */
+  "default output": v.optional(v.picklist(["paste", "copy", "show"])),
 
   // module (false is the snippet module-inference opt-out)
   module: v.optional(v.union([SaneStringSchema, v.boolean()])),

@@ -630,6 +630,23 @@ function sniffEntitlements(source) {
   });
   return [...hits.values()];
 }
+function sniffOutput(source) {
+  let dottedObject = "";
+  let beforeMark = "";
+  return scanTokens(source, {
+    word(word, prev) {
+      return word === "output" && prev === "." && dottedObject === "popclip";
+    },
+    punct(token, prev) {
+      if (token === ".") {
+        dottedObject = prev === "?" || prev === "!" ? beforeMark : prev;
+      } else if (token === "?" || token === "!") {
+        beforeMark = prev;
+      }
+      return false;
+    }
+  });
+}
 
 // src/snippet.ts
 function lines(string5) {
@@ -1008,7 +1025,12 @@ var AFTER_STEPS = [
   "preview-result",
   "show-status",
   "copy-selection",
-  "popclip-appear"
+  "popclip-appear",
+  /* Deliver the result through Output: the Action's saved Output preference, else the
+   extension's `default output`, else Show. The disposition-free step for script actions,
+   whose stdout or returned value is their only channel; results are plain text. The
+   *-result steps above keep their fixed dispositions. */
+  "output"
 ];
 var ActionFlagsSchema = v5.object({
   app: v5.optional(AppSchema),
@@ -1024,6 +1046,9 @@ var ActionFlagsSchema = v5.object({
   before: v5.optional(v5.picklist(BEFORE_STEPS)),
   after: v5.optional(v5.picklist(AFTER_STEPS)),
   permissions: v5.optional(v5.array(SaneStringSchema)),
+  /* Opt out of the whitespace contract: the action receives the exact selected text, and
+   Paste uses the exact result, with no boundary whitespace trimmed or restored. */
+  "raw text": v5.optional(v5.boolean()),
   "show as": v5.optional(v5.picklist(["icon", "text"])),
   color: v5.optional(SaneStringSchema),
   /* Menu presentation hints. Preferences, not commands: PopClip may ignore either, and where
@@ -1111,6 +1136,11 @@ var ExtensionCoreSchema = v5.object({
   /* Extensions Directory submission requirement: an extension with a static
    shell script action must explain why a shell script is needed. */
   "shell script rationale": v5.optional(LongStringSchema),
+  /* The author's recommended Output disposition for every output source in the extension
+   (popclip.output calls and `after: output` steps); users can override it per Action.
+   Extension-level only: one Output selector cannot present several defaults. Unspecified
+   means Show. */
+  "default output": v5.optional(v5.picklist(["paste", "copy", "show"])),
   // module (false is the snippet module-inference opt-out)
   module: v5.optional(v5.union([SaneStringSchema, v5.boolean()])),
   language: v5.optional(SaneStringSchema),
@@ -1251,6 +1281,7 @@ export {
   loadSnippet,
   loadStaticConfig,
   sniffEntitlements,
+  sniffOutput,
   standardizeConfig,
   standardizeIcon,
   standardizeKey,
