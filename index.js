@@ -1046,9 +1046,11 @@ var ActionFlagsSchema = v5.object({
   before: v5.optional(v5.picklist(BEFORE_STEPS)),
   after: v5.optional(v5.picklist(AFTER_STEPS)),
   permissions: v5.optional(v5.array(SaneStringSchema)),
-  /* Opt out of the whitespace contract: the action receives the exact selected text, and
-   Paste uses the exact result, with no boundary whitespace trimmed or restored. */
-  "raw text": v5.optional(v5.boolean()),
+  /* The whitespace contract. "trim": the action receives the selected text without its
+   leading and trailing whitespace, and Paste restores that whitespace around the result.
+   "exact": the exact selected text in, and the exact result pasted. Unspecified follows the
+   extension's declared PopClip version. */
+  whitespace: v5.optional(v5.picklist(["trim", "exact"])),
   "show as": v5.optional(v5.picklist(["icon", "text"])),
   color: v5.optional(SaneStringSchema),
   /* Menu presentation hints. Preferences, not commands: PopClip may ignore either, and where
