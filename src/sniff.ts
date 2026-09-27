@@ -1,6 +1,5 @@
-// Token-scan sniffs over JS/TS source: module-ness (sniffModule),
-// entitlement-requiring API use (sniffEntitlements) and popclip.output calls
-// (sniffOutput). One shared scanner walks
+// Token-scan sniffs over JS/TS source: module-ness (sniffModule) and
+// entitlement-requiring API use (sniffEntitlements). One shared scanner walks
 // the source comment-, string-, template- and regex-aware, so words inside
 // non-code text can never trigger; the sniffs differ only in what they look
 // for. Declaration tracking is out of scope (that needs a real parser), so a
@@ -393,30 +392,4 @@ export function sniffEntitlements(source: string): EntitlementHit[] {
     },
   });
   return [...hits.values()];
-}
-
-// Sniff for a `popclip.output(...)` call, so PopClip can offer the Output
-// selector for an extension that delivers through it. Only the member access
-// `popclip.output` counts: `output` alone is too common an identifier to mean
-// anything. Destructured or aliased calls, and calls made from other package
-// files, are missed; the config's `default output` declaration covers those.
-// A miss only hides the selector — the call still works.
-export function sniffOutput(source: string): boolean {
-  // the object of the most recent member access: the token before `.`, or
-  // before the `?` of `?.` or the `!` of a TypeScript non-null `!.`
-  let dottedObject = "";
-  let beforeMark = "";
-  return scanTokens(source, {
-    word(word, prev) {
-      return word === "output" && prev === "." && dottedObject === "popclip";
-    },
-    punct(token, prev) {
-      if (token === ".") {
-        dottedObject = prev === "?" || prev === "!" ? beforeMark : prev;
-      } else if (token === "?" || token === "!") {
-        beforeMark = prev;
-      }
-      return false;
-    },
-  });
 }

@@ -280,9 +280,11 @@ const ExtensionCoreSchema = v.object({
   /* Extensions Directory submission requirement: an extension with a static
    shell script action must explain why a shell script is needed. */
   "shell script rationale": v.optional(LongStringSchema),
-  /* The author's recommended Output disposition for the extension's popclip.output calls;
-   users can override it per Action. Extension-level only: one Output selector cannot
-   present several defaults. Unspecified means Show. */
+  /* Where the extension's JavaScript actions' returned results go by default, which also
+   offers users the Output setting to change it per Action. Extension-level only: one Output
+   selector cannot present several defaults. Unspecified means Paste, with no selector.
+   Script actions (the static types other than JavaScript) keep their legacy `after` result
+   steps and ignore it. */
   "default output": v.optional(v.picklist(["paste", "copy", "show"])),
   /* The whitespace contract, for the whole extension (its actions and its population):
    "trim" gives actions the selected text without its leading and trailing whitespace, and a
